@@ -29,14 +29,10 @@
     <script type="module" src="https://unpkg.com/@splinetool/viewer@1.9.28/build/spline-viewer.js" defer></script>
     <script src="three.min.js"></script>
 
-    <!-- Mark this session as "warm" so the boot screen below can fast-dismiss
-         on subsequent loads. Runs synchronously before any boot logic. -->
-    <script>
-        try {
-            window.__JB_WARM = !!localStorage.getItem('jb-visited');
-            localStorage.setItem('jb-visited', '1');
-        } catch (e) { window.__JB_WARM = false; }
-    </script>
+    <!-- Boot screen always runs (warm fast-path disabled) so background
+         resources have a fixed 5-second window to warm up before the user
+         starts interacting with the hero / robot mask. -->
+    <script>window.__JB_WARM = false;</script>
     <style>
         :root {
             --lime: #D2FF00;
@@ -92,10 +88,24 @@
         }
         .nav-brand { color: var(--lime); font-weight: 700; letter-spacing: 2px; text-shadow: var(--glow-sm); }
         .nav-links { display: flex; gap: 2rem; list-style: none; }
-        .nav-links a { color: var(--muted); text-decoration: none; letter-spacing: 1px; transition: color 0.2s, text-shadow 0.2s; }
-        .nav-links a:hover { color: var(--lime); text-shadow: var(--glow-sm); }
+        .nav-links a {
+            color: #f3f9d6;                 /* much brighter than --muted */
+            text-decoration: none;
+            letter-spacing: 1px;
+            font-weight: 500;
+            text-shadow: 0 0 6px rgba(210, 255, 0, 0.18);  /* subtle lime glow */
+            transition: color 0.2s, text-shadow 0.2s, transform 0.2s;
+        }
+        .nav-links a:hover { color: var(--lime); text-shadow: var(--glow-sm); transform: translateY(-1px); }
+        .nav-brand { color: #f3f9d6; }   /* match the brand to the new nav brightness */
         .nav-right { display: flex; align-items: center; gap: 1.5rem; }
-        #clock { color: var(--lime); opacity: 0.7; letter-spacing: 2px; }
+        #clock {
+            color: #f3f9d6;
+            opacity: 1;
+            font-weight: 500;
+            letter-spacing: 2px;
+            text-shadow: 0 0 6px rgba(210, 255, 0, 0.18);
+        }
 
         /* ─── HERO ─── */
         .character-header {
@@ -1120,31 +1130,31 @@
         }, s[0]);
     });
 
+    // NOTE: We deliberately do NOT block the boot screen on the Spline 3D scene.
+    // Instead we hold the boot screen for a fixed 5 seconds so the rest of the
+    // page (canvas, fonts, sphere, spline iframe) can warm up in the background.
+    // This trades a slightly longer intro for a smoother first interaction.
     setTimeout(function () {
-        setBar(84);
-        statusEl.textContent = 'AWAITING_3D_RENDER';
         splineLine = document.createElement('div');
         splineLine.className = 'blog blog-wait';
-        splineLine.innerHTML =
-            '> LOADING SPLINE_3D_ENGINE............<span class="boot-cursor"> _</span>';
+        splineLine.innerHTML = '> WARMING BACKGROUND_RESOURCES........<span class="boot-cursor"> _</span>';
         logEl.appendChild(splineLine);
-    }, 3000);
+    }, 2700);
 
+    // Slowly fill from 76% → 99% over the background-warmup window so the bar
+    // visibly keeps moving while resources load behind the scenes.
     setTimeout(function () {
-        var p = 84;
+        var p = 76;
         var id = setInterval(function () {
-            p = Math.min(p + 0.12, 93);
+            p = Math.min(p + 0.5, 99);
             setBar(p);
-            if (p >= 93) clearInterval(id);
-        }, 120);
-    }, 3100);
+            statusEl.textContent = 'WARMING_RESOURCES';
+            if (p >= 99) clearInterval(id);
+        }, 80);
+    }, 2700);
 
-    var viewer = document.getElementById('spline-scene');
-    if (viewer) {
-        viewer.addEventListener('load', dismiss);
-    }
-
-    setTimeout(dismiss, 20000);
+    // Dismiss after a 5-second total hold (no spline / robot wait).
+    setTimeout(dismiss, 5000);
 })();
 
 // ── Canvas rain ──
@@ -1170,14 +1180,36 @@ class Bit {
     update() { this.y += this.speed; this.opacity -= 0.018; }
 }
 
+// rAF-throttled mousemove: heavy DOM/canvas work runs at most once per frame.
+// Caches the maskZone bounding-rect and only refreshes it on resize/scroll —
+// avoiding a forced layout reflow on every mouse pixel.
+let __mx = 0, __my = 0, __mDirty = false;
+let __maskRect = maskZone.getBoundingClientRect();
+const refreshMaskRect = () => { __maskRect = maskZone.getBoundingClientRect(); };
+window.addEventListener('resize', refreshMaskRect, { passive: true });
+window.addEventListener('scroll', refreshMaskRect, { passive: true });
+
 window.addEventListener('mousemove', (e) => {
-    for (let i = 0; i < 2; i++) particles.push(new Bit(e.clientX + (Math.random() * 20 - 10), e.clientY));
-    const rect = maskZone.getBoundingClientRect();
-    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-    const px = (mx / rect.width) * 100, py = (my / rect.height) * 100;
-    const inside = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
-    robotMask.style.clipPath = inside ? `circle(115px at ${px}% ${py}%)` : `circle(0% at ${px}% ${py}%)`;
-});
+    __mx = e.clientX; __my = e.clientY;
+    if (__mDirty) return;            // already queued for next frame
+    __mDirty = true;
+    requestAnimationFrame(() => {
+        __mDirty = false;
+        // Spawn just 1 particle per frame instead of 2 per raw mouse event
+        particles.push(new Bit(__mx + (Math.random() * 20 - 10), __my));
+
+        const r = __maskRect;
+        const inside = __mx >= r.left && __mx <= r.right && __my >= r.top && __my <= r.bottom;
+        if (inside) {
+            const px = ((__mx - r.left) / r.width) * 100;
+            const py = ((__my - r.top)  / r.height) * 100;
+            robotMask.style.clipPath = `circle(115px at ${px}% ${py}%)`;
+        } else if (robotMask.style.clipPath !== 'circle(0% at 50% 50%)') {
+            // only assign when state actually changes — avoids style recalcs
+            robotMask.style.clipPath = 'circle(0% at 50% 50%)';
+        }
+    });
+}, { passive: true });
 
 function animate() {
     ctx.clearRect(0, 0, width, height);
@@ -1492,10 +1524,20 @@ const content = {
 // (which, for project cards, is the projects section).
 let __preModalScrollY = 0;
 
+// Map every content key to the section it conceptually belongs to.
+// closeTerm uses this to send the user back to the same section they came from.
+const CONTENT_SECTION = {
+    ncsu: 'experience', nagoya: 'experience', gca: 'experience',
+    car: 'projects', wolfcafe: 'projects', hacknc: 'projects', fingerprint: 'projects'
+};
+let __preModalSectionId = 'projects';
+
 function openTerm(id) {
     const d = content[id];
     const modal = document.getElementById('zoom-modal');
     document.getElementById('m-title').innerText = d.t;
+    // Remember which section this modal was opened from so closeTerm can return there.
+    __preModalSectionId = CONTENT_SECTION[id] || 'projects';
     // Rich detail body (d.html) takes precedence over the bullet list (d.bullets)
     const body = d.html
         ? `<div class="duration-line">⏱ ${d.dur}</div>${d.html}<br><button class="modal-close-btn" onclick="closeTerm()">[ CLOSE ]</button>`
@@ -1561,13 +1603,13 @@ function closeTerm() {
     document.body.style.right    = '';
     window.scrollTo(0, __preModalScrollY);
 
-    // Make sure the projects section is in view (in case they came from the
-    // sphere or the chatbot) — only nudge if we're not already near it.
-    const proj = document.getElementById('projects');
-    if (proj) {
-        const r = proj.getBoundingClientRect();
+    // Send the user back to the section the modal was opened from
+    // (experience modals → #experience, project modals → #projects, etc.)
+    const sec = document.getElementById(__preModalSectionId);
+    if (sec) {
+        const r = sec.getBoundingClientRect();
         if (r.bottom < 0 || r.top > window.innerHeight) {
-            proj.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     }
 }
