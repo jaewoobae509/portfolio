@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -L -o \"C:/Users/Jaewo/git/portfolio/temp/three.min.js\" \"https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js\" --max-time 20)"
+    ]
+  }
+}
