@@ -563,6 +563,484 @@
         .modal-close-btn { margin-top: 1.5rem; font-family: 'Fira Code', monospace; font-size: 0.75rem; color: var(--lime); background: transparent; border: 1px solid var(--border); padding: 6px 18px; cursor: pointer; letter-spacing: 2px; transition: background 0.2s, border-color 0.2s; }
         .modal-close-btn:hover { background: rgba(210,255,0,0.08); border-color: var(--lime); }
 
+        /* ─── CRT THEME ──────────────────────────────────────────────────────
+           Retro-PC modal skin used by experience modals (ncsu / nagoya / gca).
+           Whole viewport becomes a single oversized retro PC: the modal
+           backdrop is the gray bezel + retro frame, .modal-inner is the screen.
+           ──────────────────────────────────────────────────────────────────── */
+        #zoom-modal.crt {
+            background: linear-gradient(145deg, #E8E8E8 0%, #C8C8C8 100%);
+            backdrop-filter: none;
+            padding: 28px;
+            /* Chunky retro-PC frame with bevels — light highlight on top-left,
+               dark shadow on bottom-right (classic Win95 / beige-box vocabulary). */
+            box-shadow:
+                inset 0 0 0 3px #fff,
+                inset 0 0 0 6px #888,
+                inset 0 0 0 14px #DCDCDC,
+                inset 0 0 0 17px #6a6a6a,
+                inset 6px 6px 0 17px rgba(255,255,255,0.4),
+                inset -6px -6px 0 17px rgba(0,0,0,0.25),
+                0 0 80px rgba(0,0,0,0.6);
+        }
+        /* Faint scanlines over the whole bezel for extra CRT vibe */
+        #zoom-modal.crt > .crt-bezel-fx {
+            position: fixed; inset: 0;
+            pointer-events: none;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent, transparent 3px,
+                rgba(0,0,0,0.04) 3px, rgba(0,0,0,0.04) 4px
+            );
+            z-index: 0;
+        }
+        /* Ventilation grille along the bottom of the bezel */
+        #zoom-modal.crt::before {
+            content: '';
+            position: fixed;
+            left: 50%; bottom: 30px;
+            transform: translateX(-50%);
+            width: 220px; height: 14px;
+            background:
+                repeating-linear-gradient(90deg, #888 0 3px, transparent 3px 5px),
+                linear-gradient(to bottom, #c0c0c0, #a8a8a8);
+            border: 1px solid #6a6a6a;
+            border-radius: 2px;
+            opacity: 0.85;
+            z-index: 1;
+            pointer-events: none;
+        }
+        /* Brand label on the lower-left corner */
+        #zoom-modal.crt::after {
+            content: 'BAE_OS // WORKSTATION_TERMINAL  ●';
+            position: fixed;
+            left: 32px; bottom: 36px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.55rem;
+            letter-spacing: 2px;
+            color: #555;
+            z-index: 1;
+            pointer-events: none;
+        }
+        /* v14 — .modal-inner is the SCROLL VIEWPORT (clipped to the bezel
+           workspace). The actual canvas where windows live (.crt-canvas) is
+           much larger than the viewport and centered on open, so the user can
+           scroll equally far in any direction — solving the "left side doesn't
+           scroll" asymmetry. */
+        #zoom-modal.crt .modal-inner {
+            background: transparent;
+            border: none;
+            padding: 0;
+            box-shadow: none;
+            position: absolute;
+            inset: 140px 30px 70px 30px;
+            max-width: none;
+            width: auto;
+            max-height: none;
+            margin: 0;
+            display: block;
+            z-index: 2;
+            overflow: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0,0,0,0.45) transparent;
+        }
+        #zoom-modal.crt .modal-inner::-webkit-scrollbar { width: 10px; height: 10px; }
+        #zoom-modal.crt .modal-inner::-webkit-scrollbar-track { background: rgba(0,0,0,0.06); }
+        #zoom-modal.crt .modal-inner::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, #aaa, #6a6a6a);
+            border: 1px solid #555;
+        }
+        #zoom-modal.crt .modal-inner::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to bottom, #c0c0c0, #888);
+        }
+        #zoom-modal.crt .modal-inner::-webkit-scrollbar-corner { background: transparent; }
+
+        /* The wrapper takes up the *scaled* layout space so the scroll viewport
+           sees how big the workspace really is at the current zoom. The actual
+           canvas sits inside at natural 4500×2400 and is scaled via transform —
+           child windows inherit the scale automatically. */
+        #zoom-modal.crt .crt-canvas-wrap {
+            position: relative;
+            width:  calc(4500px * var(--zoom, 1));
+            height: calc(2400px * var(--zoom, 1));
+        }
+        #zoom-modal.crt .crt-canvas {
+            position: absolute;
+            inset: 0;
+            width: 4500px;
+            height: 2400px;
+            transform: scale(var(--zoom, 1));
+            transform-origin: 0 0;
+        }
+
+        /* Zoom-control toolbar — sits on the bezel just left of the close X. */
+        .crt-zoom-controls {
+            display: none;
+            position: fixed;
+            top: 36px;
+            right: 88px;
+            z-index: 5;
+            font-family: 'Fira Code', monospace;
+        }
+        #zoom-modal.crt .crt-zoom-controls { display: inline-flex; }
+        .crt-zoom-btn {
+            display: inline-flex;
+            align-items: center; justify-content: center;
+            height: 30px; min-width: 36px;
+            padding: 0 8px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem; font-weight: 800; line-height: 1;
+            color: #1a1a1a;
+            background: linear-gradient(to bottom, #f0f0f0, #cfcfcf);
+            border-top:    2px solid #fff;
+            border-left:   2px solid #d8d8d8;
+            border-right:  2px solid #6a6a6a;
+            border-bottom: 2px solid #6a6a6a;
+            cursor: pointer;
+            transition: background 0.12s;
+        }
+        .crt-zoom-btn + .crt-zoom-btn { margin-left: -2px; }
+        .crt-zoom-btn:hover  { background: linear-gradient(to bottom, #ffffff, #e0e0e0); }
+        .crt-zoom-btn:active {
+            background: linear-gradient(to bottom, #b8b8b8, #a0a0a0);
+            border-top-color: #6a6a6a; border-left-color: #6a6a6a;
+            border-right-color: #fff;   border-bottom-color: #fff;
+        }
+        .crt-zoom-reset { font-size: 0.65rem; min-width: 56px; letter-spacing: 1px; }
+
+        /* Horizontal divider line under the typed title — windows can't be
+           dragged above this. Visually separates the bezel header from the
+           workspace below. */
+        .crt-title-divider {
+            display: none;
+            position: fixed;
+            top: 120px;
+            left: 24px;
+            right: 24px;
+            height: 2px;
+            background: linear-gradient(to right,
+                transparent,
+                rgba(0,0,0,0.45) 8%,
+                rgba(0,0,0,0.45) 92%,
+                transparent);
+            box-shadow: 0 1px 0 rgba(255,255,255,0.55);
+            z-index: 1;
+            pointer-events: none;
+        }
+        #zoom-modal.crt .crt-title-divider { display: block; }
+
+        /* Bottom-right resize grip (one per .crt-window) */
+        #zoom-modal.crt .crt-resize-handle {
+            position: absolute;
+            right: 0; bottom: 0;
+            width: 18px; height: 18px;
+            cursor: nwse-resize;
+            background-image:
+                linear-gradient(135deg,
+                    transparent 0,
+                    transparent 30%,
+                    #555 30%, #555 38%,
+                    transparent 38%, transparent 52%,
+                    #555 52%, #555 60%,
+                    transparent 60%, transparent 74%,
+                    #555 74%, #555 82%,
+                    transparent 82%);
+            z-index: 4;
+            opacity: 0.55;
+            transition: opacity 0.15s;
+        }
+        #zoom-modal.crt .crt-window:hover .crt-resize-handle,
+        #zoom-modal.crt .crt-window.resizing .crt-resize-handle { opacity: 1; }
+        #zoom-modal.crt .crt-window.minimized .crt-resize-handle { display: none; }
+        #zoom-modal.crt .crt-window.resizing { transition: none; }
+
+        /* Each .crt-window is one popped-up blue panel. Multiple of them stack
+           inside the bezel and can be dragged + minimized independently. */
+        #zoom-modal.crt .crt-window {
+            position: absolute;
+            left: var(--w-x, 50%);
+            top:  var(--w-y, 0px);
+            width: min(720px, calc(100% - 40px));
+            max-height: calc(100vh - 240px);
+            transform: translate(-50%, 0) translate(var(--drag-x, 0px), var(--drag-y, 0px));
+            display: flex; flex-direction: column;
+            min-height: 0;
+            border-radius: 8px;
+            box-shadow:
+                0  2px  0   rgba(255,255,255,0.55) inset,
+                0 -2px  0   rgba(0,0,0,0.20)        inset,
+                0 18px 30px -8px rgba(0,0,0,0.55),
+                0 36px 60px -16px rgba(0,0,0,0.45),
+                0 0 0 1px rgba(0,0,0,0.18);
+            transition: box-shadow 0.18s ease;
+            animation: crt-pop 0.32s cubic-bezier(.2,.9,.25,1.15) backwards;
+        }
+        #zoom-modal.crt .crt-window:nth-child(1) { animation-delay: 0.05s; }
+        #zoom-modal.crt .crt-window:nth-child(2) { animation-delay: 0.18s; }
+        #zoom-modal.crt .crt-window:nth-child(3) { animation-delay: 0.31s; }
+        #zoom-modal.crt .crt-window.dragging { transition: none; }
+        #zoom-modal.crt .crt-window.dragging,
+        #zoom-modal.crt .crt-window:hover {
+            box-shadow:
+                0  2px  0   rgba(255,255,255,0.6)  inset,
+                0 -2px  0   rgba(0,0,0,0.22)        inset,
+                0 22px 38px -8px rgba(0,0,0,0.6),
+                0 46px 70px -16px rgba(0,0,0,0.5),
+                0 0 0 1px rgba(0,0,0,0.22);
+        }
+        @keyframes crt-pop {
+            0%   { transform: translate(-50%, 0) translate(var(--drag-x, 0px), calc(var(--drag-y, 0px) + 22px)) scale(0.94); opacity: 0; }
+            100% { transform: translate(-50%, 0) translate(var(--drag-x, 0px), var(--drag-y, 0px)) scale(1); opacity: 1; }
+        }
+        /* Minimized: collapse to just the gray drag-handle bar.
+           !important is required because user resizing sets inline height. */
+        #zoom-modal.crt .crt-window.minimized .crt-window-body { display: none; }
+        #zoom-modal.crt .crt-window.minimized {
+            height: auto !important;
+            max-height: none !important;
+            min-height: 0 !important;
+            box-shadow:
+                0  2px  0   rgba(255,255,255,0.55) inset,
+                0 -2px  0   rgba(0,0,0,0.20)        inset,
+                0 8px 16px -4px rgba(0,0,0,0.45),
+                0 0 0 1px rgba(0,0,0,0.2);
+        }
+
+        /* Per-window draggable header (one per .crt-window) */
+        #zoom-modal.crt .crt-window-handle {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: linear-gradient(to bottom, #DCDCDC, #B8B8B8);
+            border-top:    1px solid #fff;
+            border-left:   1px solid #c8c8c8;
+            border-right:  1px solid #6a6a6a;
+            border-bottom: 1px solid #6a6a6a;
+            padding: 7px 10px 6px;
+            cursor: grab;
+            user-select: none;
+            -webkit-user-select: none;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.65rem;
+            color: #444;
+            letter-spacing: 1.5px;
+            border-radius: 8px 8px 0 0;
+        }
+        #zoom-modal.crt .crt-window-handle:active { cursor: grabbing; }
+        .crt-drag-dots { display: inline-flex; gap: 6px; align-items: center; }
+        .crt-drag-dots > span {
+            width: 11px; height: 11px; border-radius: 50%;
+            border: 1px solid rgba(0,0,0,0.25);
+        }
+        .crt-drag-dots > span:nth-child(1) { background: #ff5f57; }
+        .crt-drag-dots > span:nth-child(2) { background: #febc2e; }
+        .crt-drag-dots > span:nth-child(3) { background: #28c840; }
+        .crt-drag-label {
+            flex: 1;
+            opacity: 0.95;
+            font-weight: 800;
+            color: #1a1a1a;
+            letter-spacing: 1.6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Minimize button (per window) */
+        .crt-min-btn {
+            display: inline-flex;
+            align-items: center; justify-content: center;
+            min-width: 30px; height: 18px; padding: 0 6px;
+            margin-left: 8px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.65rem; font-weight: 800; line-height: 1;
+            color: #2a2a2a;
+            background: linear-gradient(to bottom, #f0f0f0, #cfcfcf);
+            border-top:    1px solid #fff;
+            border-left:   1px solid #d8d8d8;
+            border-right:  1px solid #6a6a6a;
+            border-bottom: 1px solid #6a6a6a;
+            cursor: pointer;
+            transition: background 0.12s, color 0.12s;
+            user-select: none;
+            -webkit-user-select: none;
+            letter-spacing: 1px;
+        }
+        .crt-min-btn:hover  { background: linear-gradient(to bottom, #ffffff, #dcdcdc); }
+        .crt-min-btn:active {
+            background: linear-gradient(to bottom, #b8b8b8, #a0a0a0);
+            border-top-color: #6a6a6a; border-left-color: #6a6a6a;
+            border-right-color: #fff;   border-bottom-color: #fff;
+        }
+
+        /* Global close (X) — sits on the top-right of the gray bezel */
+        #zoom-modal.crt .crt-bezel-close {
+            position: fixed;
+            top: 36px; right: 36px;
+            z-index: 5;
+            width: 38px; height: 30px;
+            display: inline-flex;
+            align-items: center; justify-content: center;
+            font-family: 'Fira Code', monospace;
+            font-size: 1.1rem; font-weight: 900; line-height: 1;
+            color: #1a1a1a;
+            background: linear-gradient(to bottom, #f0f0f0, #cfcfcf);
+            border-top:    2px solid #fff;
+            border-left:   2px solid #d8d8d8;
+            border-right:  2px solid #6a6a6a;
+            border-bottom: 2px solid #6a6a6a;
+            cursor: pointer;
+            transition: background 0.12s, color 0.12s;
+        }
+        #zoom-modal:not(.crt) .crt-bezel-close { display: none; }
+        #zoom-modal.crt .crt-bezel-close:hover {
+            background: linear-gradient(to bottom, #ff7a7a, #ff3838);
+            color: #fff;
+        }
+        #zoom-modal.crt .crt-bezel-close:active {
+            background: linear-gradient(to bottom, #d83030, #b81818);
+            border-top-color: #6a6a6a; border-left-color: #6a6a6a;
+            border-right-color: #fff;   border-bottom-color: #fff;
+        }
+
+        /* ─── TYPED EXPERIENCE TITLE ─────────────────────────────────────────
+           Sits at the top-center of the bezel and types itself out letter-by-
+           letter when the CRT modal opens. Uses CSS steps() driven by
+           --typed-w and --typed-len (set in JS once the length is known). */
+        .crt-typed-title {
+            position: fixed;
+            top: 56px; left: 50%;
+            transform: translateX(-50%);
+            z-index: 3;
+            font-family: 'Fira Code', monospace;
+            font-size: clamp(1.4rem, 3.4vw, 2.4rem);
+            font-weight: 800;
+            letter-spacing: 4px;
+            color: #1a1a1a;                                /* black on the gray bezel */
+            text-shadow: 0 1px 0 rgba(255,255,255,0.55);   /* subtle bevel highlight */
+            white-space: nowrap;
+            overflow: hidden;
+            border-right: 3px solid #1a1a1a;
+            width: 0;
+            display: none;
+            padding-right: 2px;
+        }
+        #zoom-modal.crt .crt-typed-title {
+            display: inline-block;
+            /* --typed-w is set in JS to the *measured* pixel width so letter-spacing
+               doesn't cut the animation short (e.g. SOFTWARE ENGIN…). */
+            animation:
+                crt-typing 1.6s steps(var(--typed-len, 18), end) 0.2s forwards,
+                crt-caret  0.7s step-end infinite;
+        }
+        @keyframes crt-typing {
+            from { width: 0; }
+            to   { width: var(--typed-w, 100%); }
+        }
+        @keyframes crt-caret {
+            0%, 100% { border-right-color: #1a1a1a; }
+            50%      { border-right-color: transparent; }
+        }
+
+        @media (max-width: 720px) {
+            #zoom-modal.crt { padding: 14px; }
+            #zoom-modal.crt::before, #zoom-modal.crt::after { display: none; }
+            #zoom-modal.crt .modal-inner { width: calc(100% - 32px); max-height: calc(100vh - 130px); margin-top: 50px; }
+            .crt-typed-title { top: 22px; letter-spacing: 2px; font-size: 1.1rem; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            #zoom-modal.crt .crt-typed-title { animation: crt-caret 0.7s step-end infinite; width: var(--typed-w, 100%); }
+        }
+        #zoom-modal.crt .modal-titlebar {
+            background: linear-gradient(to bottom, #DCDCDC, #BFBFBF);
+            border: 1px solid #888;
+            border-bottom: none;
+            padding: 6px 10px;
+            display: flex; align-items: center; gap: 8px;
+            border-radius: 3px 3px 0 0;
+        }
+        /* Three small bezel dots like the reference screenshot */
+        #zoom-modal.crt .modal-titlebar::before {
+            content: '';
+            display: inline-flex;
+            background:
+                radial-gradient(circle at center, #aaa 55%, transparent 56%) 0 50% / 5px 5px no-repeat,
+                radial-gradient(circle at center, #aaa 55%, transparent 56%) 9px 50% / 5px 5px no-repeat,
+                radial-gradient(circle at center, #aaa 55%, transparent 56%) 18px 50% / 5px 5px no-repeat;
+            width: 23px; height: 5px;
+        }
+        #zoom-modal.crt .modal-titlebar { display: none; }
+        #zoom-modal.crt > .modal-inner > .modal-body { display: none; }   /* legacy single body unused in CRT mode */
+
+        /* In-window content styling */
+        #zoom-modal.crt .crt-window-body h4 {
+            margin: 1rem 0 0.4rem;
+            font-size: 0.85rem;
+            letter-spacing: 2px;
+        }
+        #zoom-modal.crt .crt-window-body h4:first-child { margin-top: 0; }
+        #zoom-modal.crt .crt-window-body p,
+        #zoom-modal.crt .crt-window-body li { line-height: 1.65; }
+        #zoom-modal.crt .crt-lead { margin: 0 0 1rem; opacity: 0.95; }
+        #zoom-modal.crt .crt-list { margin: 0 0 0.6rem; padding-left: 1.2rem; }
+        #zoom-modal.crt .crt-list li { margin-bottom: 0.35rem; }
+
+        #zoom-modal.crt .crt-window-body {
+            background: #000080;
+            /* Single retro frame — beveled, no extra layer behind it */
+            /* Drag-handle sits above the body, so no top border here */
+            border-top:    none;
+            border-left:   1px solid #6a6a6a;
+            border-right:  1px solid #6a6a6a;
+            border-bottom: 1px solid #6a6a6a;
+            color: #FFF;
+            padding: 2.4rem 2.6rem 2.6rem;
+            position: relative;
+            overflow-y: auto;
+            flex: 1 1 auto;
+            box-shadow:
+                inset  2px  2px 0 rgba(0,0,0,0.45),
+                inset -2px -2px 0 rgba(255,255,255,0.05);
+        }
+        /* Horizontal scanline overlay — same recipe as .monitor-screen::after */
+        #zoom-modal.crt .crt-window-body::after {
+            content: "";
+            position: absolute; inset: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent, transparent 3px,
+                rgba(0,0,0,0.18) 3px, rgba(0,0,0,0.18) 4px
+            );
+            pointer-events: none;
+            z-index: 1;
+        }
+        #zoom-modal.crt .crt-window-body > * { position: relative; z-index: 2; }
+
+        /* CRT palette: lime headings, white body, cyan dates */
+        #zoom-modal.crt .crt-window-body                  { color: #FFF; }
+        #zoom-modal.crt .crt-window-body h1,
+        #zoom-modal.crt .crt-window-body h2,
+        #zoom-modal.crt .crt-window-body h3,
+        #zoom-modal.crt .crt-window-body h4              { color: var(--lime); text-shadow: 0 0 8px rgba(210,255,0,0.6); }
+        #zoom-modal.crt .crt-window-body strong          { color: var(--lime); }
+        #zoom-modal.crt .crt-window-body em              { color: #BFEFFF; font-style: normal; }
+        #zoom-modal.crt .crt-window-body .duration-line  { color: var(--cyan); opacity: 0.95; text-shadow: 0 0 6px rgba(0,240,255,0.5); }
+        #zoom-modal.crt .prompt-arrow               { color: var(--lime); opacity: 0.95; text-shadow: 0 0 6px rgba(210,255,0,0.5); }
+        #zoom-modal.crt .crt-window-body code,
+        #zoom-modal.crt .crt-window-body pre             { background: rgba(0,0,0,0.35); color: #BFEFFF; }
+
+        #zoom-modal.crt .modal-close-btn {
+            color: #FFF;
+            background: rgba(0,0,0,0.25);
+            border: 1px solid rgba(255,255,255,0.35);
+            text-shadow: 0 0 4px rgba(210,255,0,0.3);
+        }
+        #zoom-modal.crt .modal-close-btn:hover {
+            background: rgba(210,255,0,0.18);
+            border-color: var(--lime);
+            color: var(--lime);
+        }
+
         /* ─── RICH PROJECT DETAIL (STAR layout) ─── */
         .pd-hero { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; margin: 0 0 1.75rem; }
         .pd-stat {
@@ -971,14 +1449,14 @@
                 <div class="project-card-arrow">↗</div>
                 <p class="project-card-desc">ROS-based autonomous vehicle with LiDAR lane-following and real-time OpenCV vision pipelines.</p>
                 <div class="project-card-tech"><span class="tech-tag">ROS</span><span class="tech-tag">Python</span><span class="tech-tag">Arduino</span><span class="tech-tag">OpenCV</span></div>
-                <div class="project-card-date">2025 — PRESENT</div>
+                <div class="project-card-date">JAN - MAY 2026</div>
             </div>
             <div class="project-card reveal reveal-d2" onclick="openTerm('fingerprint')" tabindex="0">
                 <div class="project-card-title">FINGERPRINT AUTH SYSTEM</div>
                 <div class="project-card-arrow">↗</div>
                 <p class="project-card-desc">Biometric 1:N open-set identification using RootSIFT + global histogram fusion. AUC 0.95 across 500 identities.</p>
                 <div class="project-card-tech"><span class="tech-tag">Python</span><span class="tech-tag">OpenCV</span><span class="tech-tag">scikit-learn</span><span class="tech-tag">RootSIFT</span></div>
-                <div class="project-card-date">APR 2025</div>
+                <div class="project-card-date">APR 2026</div>
             </div>
             <div class="project-card reveal reveal-d3" onclick="openTerm('hacknc')" tabindex="0">
                 <div class="project-card-title">HACKNC 2025 HEALTH PLATFORM</div>
@@ -992,7 +1470,7 @@
                 <div class="project-card-arrow">↗</div>
                 <p class="project-card-desc">Full-stack cafe management platform with real-time order processing and REST API integration.</p>
                 <div class="project-card-tech"><span class="tech-tag">Java</span><span class="tech-tag">Spring Boot</span><span class="tech-tag">React</span><span class="tech-tag">MySQL</span></div>
-                <div class="project-card-date">SPRING 2025</div>
+                <div class="project-card-date">AUG - DEC 2025</div>
             </div>
         </div>
         <div class="project-scroll-nav">
@@ -1030,6 +1508,20 @@
 
 <!-- MODAL -->
 <div id="zoom-modal">
+    <!-- Subtle bezel scanline overlay, only visible when the modal has the .crt class -->
+    <div class="crt-bezel-fx" aria-hidden="true"></div>
+    <!-- Typed experience title (visible only in CRT mode). Sits at top-center of bezel. -->
+    <div class="crt-typed-title" id="crt-typed-title"></div>
+    <!-- Global close button on the bezel (CRT mode only). Hidden in project modals. -->
+    <button class="crt-bezel-close" id="crt-bezel-close" type="button" aria-label="Close" title="Close">✕</button>
+    <!-- Zoom-control toolbar (CRT mode only). Hidden in project modals. -->
+    <div class="crt-zoom-controls" id="crt-zoom-controls" role="toolbar" aria-label="Zoom">
+        <button class="crt-zoom-btn"           id="crt-zoom-out"   type="button" aria-label="Zoom out"  title="Zoom out (Ctrl + −)">−</button>
+        <button class="crt-zoom-btn crt-zoom-reset" id="crt-zoom-reset" type="button" aria-label="Reset zoom" title="Reset zoom (Ctrl + 0)">100%</button>
+        <button class="crt-zoom-btn"           id="crt-zoom-in"    type="button" aria-label="Zoom in"   title="Zoom in (Ctrl + +)">+</button>
+    </div>
+    <!-- Horizontal divider line under the title (CRT mode only). -->
+    <div class="crt-title-divider" id="crt-title-divider" aria-hidden="true"></div>
     <div class="modal-inner">
         <div class="modal-titlebar">
             <span class="modal-titlebar-text" id="m-title">LOADING...</span>
@@ -1411,9 +1903,301 @@ setInterval(() => { document.getElementById('clock').innerText = new Date().toLo
 
 // ── Content data ──
 const content = {
-    ncsu: { t: "NC STATE UNIVERSITY // SOFTWARE ENGINEER", dur: "Jan 2026 – Current", bullets: ["Led Public Syllabus feature development with Spring Boot REST APIs.", "Implementing Syllabus Propagation logic for database synchronization.", "Achieved 78.4% JUnit test coverage on core modules."] },
-    nagoya: { t: "NAGOYA UNIVERSITY // AI RESEARCHER", dur: "Jun – Jul 2024", bullets: ["Applied DeepSDF-based generative AI to optimize 3D bumper crash bar shapes.", "Built 3D shape generation models with PyTorch, achieving 95.7% accuracy.", "Contributed to international research publication pipeline."] },
-    gca: { t: "GLOBAL CAREER ACCELERATOR // DATA ANALYSIS INTERN", dur: "May – Jul 2025", bullets: ["Led environmental impact analysis using Intel sustainability data and SQL.", "Visualized datasets using Python, Pandas, and Plotly.", "Delivered insights report presented to senior stakeholders."] },
+    ncsu: {
+        t: "NC STATE UNIVERSITY // SOFTWARE ENGINEER",
+        dur: "Jan 2026 – Current",
+        // Multiple CRT windows so the long story is split into readable chunks.
+        // Each window is independently draggable + minimizable.
+        windows: [
+            {
+                title: "WHAT_WE_BUILT.txt",
+                body: `
+                    <div class="duration-line">⏱ Jan 2026 – Current  ·  PackSyllabus @ NCSU</div>
+                    <p class="crt-lead">Inherited and extended the existing PackSyllabus codebase with two major features over the Spring 2026 semester.</p>
+                    <h4>▌ Microsyllabus System</h4>
+                    <ul class="crt-list">
+                        <li>UGCC Chair marks specific syllabus sections as <strong>"Public Mandatory"</strong> at the template level — those sections lock automatically across every child template and instructor syllabus.</li>
+                        <li>Instructors pick optional sections, preview a live PDF, certify copyright compliance, and finalize a public syllabus.</li>
+                        <li>Color-coded Chair dashboard shows public status per syllabus: <em>NOT_CREATED</em>, <em>READY</em>, or <em>OUTDATED</em>.</li>
+                        <li>One-click bulk export of all finalized public PDFs for a semester as a single ZIP archive.</li>
+                    </ul>
+                    <h4>▌ Edit Propagation</h4>
+                    <ul class="crt-list">
+                        <li>Solves outdated syllabi caused by policy changes mid-semester.</li>
+                        <li>When a Chair/Coordinator edits a locked section in a template, a diff is auto-computed against every downstream document.</li>
+                        <li>Instructors and Coordinators see a <strong>"pending changes"</strong> notification and can preview exactly what will change before accepting.</li>
+                    </ul>
+                    <h4>▌ Platform Improvements</h4>
+                    <ul class="crt-list">
+                        <li>Refactored the frontend to eliminate large amounts of duplicated role-based code inherited from previous teams.</li>
+                        <li>Built a full <strong>CI/CD pipeline</strong> with GitHub Actions: full test suite on every commit, automatic deploys to the university VM.</li>
+                    </ul>
+                `
+            },
+            {
+                title: "HOW_WE_BUILT_IT.txt",
+                body: `
+                    <h4>▌ Stack</h4>
+                    <ul class="crt-list">
+                        <li><strong>Frontend:</strong> React + Axios.</li>
+                        <li><strong>Backend:</strong> Java Spring Boot + Hibernate (ORM).</li>
+                        <li><strong>Database:</strong> PostgreSQL.</li>
+                        <li><strong>Infra:</strong> Docker + NCSU Shibboleth SSO reverse proxy.</li>
+                    </ul>
+                    <h4>▌ Microsyllabus — Implementation</h4>
+                    <ul class="crt-list">
+                        <li>Added new boolean schema fields: <code>isPublicMandatory</code>, <code>isPublic</code>, <code>publicStatus</code>.</li>
+                        <li>Wrote 4 new REST endpoints: configuration, PDF streaming, status aggregation, bulk ZIP export.</li>
+                        <li>Built a multi-step frontend wizard for instructors to compose and finalize their public syllabus.</li>
+                    </ul>
+                    <h4>▌ Edit Propagation — Implementation</h4>
+                    <ul class="crt-list">
+                        <li>Designed a <strong>timestamp-based diff engine</strong>: sections and blocks carry a <code>lastModified</code> value.</li>
+                        <li>Propagation logic compares parent and child timestamps and applies only additions, deletions, or updates where the parent is newer.</li>
+                        <li>Preserves all instructor-specific content while delivering policy changes accurately.</li>
+                    </ul>
+                    <h4>▌ Process</h4>
+                    <ul class="crt-list">
+                        <li>Three 4-week iterations.</li>
+                        <li>Iteration 1: whole team on Microsyllabus → realized overlapping tasks caused blocking.</li>
+                        <li>Iteration 2+: split into independent sub-teams owning <strong>complete vertical slices</strong> → frontend refactor + Edit Propagation ran concurrently → significantly higher throughput.</li>
+                    </ul>
+                `
+            },
+            {
+                title: "DIFFICULTIES_AND_RESULTS.txt",
+                body: `
+                    <h4>▌ Hardest Problem: Propagation Correctness</h4>
+                    <ul class="crt-list">
+                        <li>A naive overwrite would <strong>destroy instructor customizations</strong>.</li>
+                        <li>Solution: surgical diff on a deep copy of the document tree.</li>
+                        <li>Preview is shown to the user <em>before</em> anything is saved.</li>
+                        <li>Applied selectively, only where the parent's timestamp is newer than the child's.</li>
+                    </ul>
+                    <h4>▌ Known Limitation</h4>
+                    <ul class="crt-list">
+                        <li>Propagation does not enforce section ordering — a new section added in the middle of a parent template can appear at the bottom of a child after acceptance.</li>
+                        <li>Documented and recommended an explicit <code>orderIndex</code> field for the next team.</li>
+                    </ul>
+                    <h4>▌ Inherited Codebase Challenge</h4>
+                    <ul class="crt-list">
+                        <li>Took on a large, undocumented multi-semester codebase with heavily duplicated frontend architecture.</li>
+                        <li>Spent the first 2 weeks on review + a detailed refactoring proposal before writing any new code.</li>
+                        <li>Paid off: Iteration 3 refactor went smoothly because we already had a complete map.</li>
+                    </ul>
+                    <h4>▌ Results</h4>
+                    <ul class="crt-list">
+                        <li>All <strong>15 system acceptance tests</strong> pass.</li>
+                        <li><strong>198 backend unit tests</strong> · ~80% statement coverage.</li>
+                        <li>Application deployed and running on the NCSU VM.</li>
+                    </ul>
+                `
+            }
+        ],
+        bullets: [
+            "Led Public Syllabus feature development with Spring Boot REST APIs.",
+            "Implemented Edit Propagation diff engine with timestamp-based merging.",
+            "Achieved ~80% backend statement coverage across 198 unit tests."
+        ]
+    },
+    nagoya: {
+        t: "NAGOYA UNIVERSITY // AI RESEARCHER",
+        dur: "Jun – Jul 2024",
+        windows: [
+            {
+                title: "PROBLEM_AND_APPROACH.txt",
+                body: `
+                    <div class="duration-line">⏱ Jun – Jul 2024  ·  Nagoya University · AI × Mechanics</div>
+                    <p class="crt-lead">Designed a 3D generative model that produces structurally valid shapes driven by physical parameters — a problem text-to-3D systems like Shape-E and DreamFusion can't solve.</p>
+                    <h4>▌ Why Existing Systems Fail Here</h4>
+                    <ul class="crt-list">
+                        <li>Shape-E / DreamFusion need huge <strong>paired language–image</strong> datasets.</li>
+                        <li>No such pairing exists for <strong>structural mechanics</strong>.</li>
+                        <li>Engineers don't describe a crash box in English — they describe it in <em>strain energy</em> and <em>load direction</em>.</li>
+                    </ul>
+                    <h4>▌ My Approach</h4>
+                    <ul class="crt-list">
+                        <li>Extended <strong>DeepSDF</strong> (a network that represents shapes via Signed Distance Function values) with mechanical-parameter conditioning.</li>
+                        <li>Inputs: <strong>strain energy</strong>, <strong>load direction</strong>, <strong>volume</strong>, <strong>height</strong> — alongside the standard latent vector.</li>
+                        <li>Outputs: physically plausible 3D shapes for a true <strong>Parameter-to-3D</strong> task — no encoder needed.</li>
+                    </ul>
+                `
+            },
+            {
+                title: "MODEL_ARCHITECTURE.txt",
+                body: `
+                    <h4>▌ Stack</h4>
+                    <ul class="crt-list">
+                        <li><strong>Framework:</strong> PyTorch.</li>
+                        <li><strong>Backbone:</strong> DeepSDF — implicit shape representation via SDF values at sample points.</li>
+                        <li><strong>Decoder:</strong> Feed-Forward Neural Network (FFNN).</li>
+                    </ul>
+                    <h4>▌ Network Modifications</h4>
+                    <ul class="crt-list">
+                        <li>Rebuilt the input layer to concatenate three vectors before the decoder:
+                            <ul class="crt-list">
+                                <li>positional-encoded <code>(x, y, z)</code> sample-point coords</li>
+                                <li>the standard latent vector <code>z</code></li>
+                                <li>the new mechanical-parameter vector <code>p</code></li>
+                            </ul>
+                        </li>
+                        <li>This combined tensor flows through the FFNN decoder to produce SDF predictions conditioned on <strong>both</strong> identity and physics.</li>
+                    </ul>
+                    <h4>▌ Why It Works Without an Encoder</h4>
+                    <ul class="crt-list">
+                        <li>Making physics part of the conditional input frees the latent vector.</li>
+                        <li>At inference: feed a target strain energy + structural config → network generates a matching 3D shape.</li>
+                    </ul>
+                `
+            },
+            {
+                title: "TRAINING_DATA_PIPELINE.txt",
+                body: `
+                    <p class="crt-lead">No existing dataset pairs 3D geometries with nonlinear structural-mechanics parameters. I built one from scratch.</p>
+                    <h4>▌ Geometry Generation</h4>
+                    <ul class="crt-list">
+                        <li>Generated <strong>10,000+ crash box geometries</strong> via linear topology optimization.</li>
+                        <li>Systematically varied load direction across a continuous range in <strong>XYZ space</strong> to produce diverse structural forms.</li>
+                    </ul>
+                    <h4>▌ Physics Labeling on Fugaku</h4>
+                    <ul class="crt-list">
+                        <li>Ran <strong>elastoplastic collision analysis</strong> on every shape on the <strong>Fugaku supercomputer</strong>.</li>
+                        <li>Solver: unified Eulerian structure-fluid.</li>
+                        <li>Per-analysis: <strong>15 m/s compression</strong> on aluminum structure with <strong>4.19M cells</strong>.</li>
+                        <li>Computed plastic strain energy absorbed during impact → the parameter label.</li>
+                    </ul>
+                    <h4>▌ Final Dataset</h4>
+                    <ul class="crt-list">
+                        <li><strong>10,114</strong> labeled geometry-parameter pairs.</li>
+                        <li>Split: <strong>6,000 train</strong> / <strong>600 test</strong>.</li>
+                        <li>Strain-energy values spread across a broad histogram for coverage of diverse structural behaviors.</li>
+                    </ul>
+                `
+            },
+            {
+                title: "RESULTS_AND_OPTIMIZATIONS.txt",
+                body: `
+                    <h4>▌ Headline Results</h4>
+                    <ul class="crt-list">
+                        <li>Average accuracy: <strong>95.7%</strong>  ·  median: <strong>96.5%</strong>.</li>
+                        <li>Evaluated on <strong>340 generated shapes</strong>, strain-energy range <strong>12.6 J – 33.7 J</strong>.</li>
+                        <li>Average target-vs-generated strain-energy gap: <strong>just 0.68 J</strong>.</li>
+                    </ul>
+                    <h4>▌ Quality Optimizations</h4>
+                    <ul class="crt-list">
+                        <li><strong>Latent-space interpolation:</strong> midpoint latent vectors between two known shapes generate structurally coherent intermediates.</li>
+                        <li><strong>Automated Blender post-processing</strong> removes floating-artifact fragments the stochastic decoder occasionally emits.</li>
+                    </ul>
+                    <h4>▌ Overfitting & Mitigation</h4>
+                    <ul class="crt-list">
+                        <li>Slender geometries (e.g. some airplane configs) caused sparse sample-point placement → high SDF variance → overfitting.</li>
+                        <li>Resolved through <strong>dataset curation</strong> + <strong>training regularization</strong>.</li>
+                    </ul>
+                    <h4>▌ Bottom Line</h4>
+                    <ul class="crt-list">
+                        <li>End-to-end pipeline: <em>parameters → shape → collision-analysis validation → artifact cleanup</em>.</li>
+                        <li>Proves a <strong>physics-aware generative AI system</strong> can produce design-ready 3D structures for engineering — without the massive paired datasets text-to-3D approaches depend on.</li>
+                    </ul>
+                `
+            }
+        ],
+        bullets: [
+            "Extended DeepSDF with mechanical-parameter conditioning (strain energy, load direction, volume, height) for true Parameter-to-3D generation.",
+            "Built a 10,114-pair dataset by topology-optimizing 10K+ crash boxes and labeling them with elastoplastic collision analysis on the Fugaku supercomputer.",
+            "Achieved 95.7% average accuracy across 340 generated shapes with a 0.68 J average strain-energy error.",
+            "Added latent-space interpolation + automated Blender post-processing for production-ready geometry."
+        ]
+    },
+    gca: {
+        t: "GLOBAL CAREER ACCELERATOR // DATA ANALYSIS TRAINEE",
+        dur: "May – Jul 2025",
+        windows: [
+            {
+                title: "PROGRAM_OVERVIEW.txt",
+                body: `
+                    <div class="duration-line">⏱ May – Jul 2025  ·  GCA · NCSU × Intel × The Recording Academy</div>
+                    <p class="crt-lead">A trainee program partnering NC State with Intel and The Recording Academy. Two professional-level data projects, plus broad domain exposure across SQL and Python tracks.</p>
+                    <h4>▌ Domains Covered</h4>
+                    <ul class="crt-list">
+                        <li>YouTube trending videos & NBA performance data (SQL).</li>
+                        <li>California traffic collisions & ASOS revenue trends (Python).</li>
+                        <li>Intel device repurposing — sustainability impact.</li>
+                        <li>The Recording Academy — Grammys site engagement.</li>
+                    </ul>
+                    <h4>▌ Outcome</h4>
+                    <ul class="crt-list">
+                        <li>Final scores <strong>above 105%</strong> on both tracks.</li>
+                        <li>Certifications: <strong>Data Wrangling with SQL</strong>, <strong>Python for Data</strong>, <strong>AI Professional Skills</strong>, <strong>Intercultural Collaboration</strong>.</li>
+                    </ul>
+                `
+            },
+            {
+                title: "INTEL_SUSTAINABILITY.txt",
+                body: `
+                    <h4>▌ The Brief</h4>
+                    <ul class="crt-list">
+                        <li>Use real Intel device-repurposing data to find smarter strategies that reduce energy use and CO₂ emissions globally.</li>
+                    </ul>
+                    <h4>▌ Key Findings</h4>
+                    <ul class="crt-list">
+                        <li><strong>Older devices</strong> deliver the highest per-device environmental savings.</li>
+                        <li><strong>Asia</strong> offers the largest impact — its grid has higher carbon intensity per kWh.</li>
+                        <li><strong>Laptops</strong> contribute the most total savings because of sheer volume.</li>
+                    </ul>
+                    <h4>▌ My Contribution</h4>
+                    <ul class="crt-list">
+                        <li>Wrote SQL queries to clean, join, and aggregate the dataset.</li>
+                        <li>Authored an <strong>independent written report</strong> (beyond the guided steps) synthesizing findings into strategic recommendations for a business audience.</li>
+                    </ul>
+                `
+            },
+            {
+                title: "GRAMMYS_STRATEGY.txt",
+                body: `
+                    <h4>▌ The Brief (Capstone — Python for Data)</h4>
+                    <ul class="crt-list">
+                        <li>Analyze engagement and demographic data behind The Recording Academy's decision to split <code>grammys.com</code> and <code>recordingacademy.com</code> into two separate sites.</li>
+                    </ul>
+                    <h4>▌ Tools</h4>
+                    <ul class="crt-list">
+                        <li>Python · pandas · Plotly · Jupyter Notebooks.</li>
+                    </ul>
+                    <h4>▌ Key Findings</h4>
+                    <ul class="crt-list">
+                        <li>The split <strong>boosted engagement on recordingacademy.com</strong> — more pages/session, longer sessions, lower bounce rate.</li>
+                        <li><strong>grammys.com</strong> attracted a broader, more casual audience skewed <strong>55+</strong>.</li>
+                        <li>Benchmarked against the AMAs: <strong>68%</strong> of Grammy traffic is mobile, yet the AMA site outperformed it on mobile experience — a clear gap.</li>
+                    </ul>
+                    <h4>▌ My Contribution</h4>
+                    <ul class="crt-list">
+                        <li>Built the analysis notebooks + visualizations.</li>
+                        <li>Authored an <strong>independent technical report</strong> with strategic recommendations for the Academy.</li>
+                    </ul>
+                `
+            },
+            {
+                title: "OBSTACLES_AND_RESOLUTIONS.txt",
+                body: `
+                    <h4>▌ ⚠ Working with Real, Messy Data</h4>
+                    <ul class="crt-list">
+                        <li><strong>Problem:</strong> datasets weren't clean — inconsistencies, missing values, unclear relationships between variables.</li>
+                        <li><strong>Resolution:</strong> systematic cleaning in SQL and Python — filter, join, validate before any analysis. This raised the reliability of every downstream insight.</li>
+                    </ul>
+                    <h4>▌ ⚠ Turning Analysis into Business Insights</h4>
+                    <ul class="crt-list">
+                        <li><strong>Problem:</strong> raw analysis isn't enough — the hard part was translating technical results into <em>business</em> recommendations.</li>
+                        <li><strong>Resolution:</strong> structured findings around clear business questions, used Python visualizations to support each point, and wrote independent reports tying technical results back to strategic decisions.</li>
+                    </ul>
+                `
+            }
+        ],
+        bullets: [
+            "Two professional-level data projects: Intel sustainability + Grammys site strategy.",
+            "Intel — SQL analysis identified older devices, Asia, and laptops as highest-impact CO₂ savings vectors.",
+            "Grammys — pandas/Plotly analysis showed the .com split boosted recordingacademy.com engagement; flagged a 68%-mobile UX gap.",
+            "Final scores above 105%; certifications in SQL, Python, AI Professional Skills, and Intercultural Collaboration."
+        ]
+    },
     car: {
         t: "PROJECT // CAPSTONE SELF-DRIVING CAR",
         dur: "ROS 2 · Python · OpenCV · YOLOv8 · ZED Stereo Camera · CAN Bus · Xbox Controller",
@@ -1506,18 +2290,427 @@ const content = {
         `,
         bullets: ["ROS 2 capstone autonomous vehicle: lane-following + stop-sign braking + manual override.", "Four cooperating nodes (Xbox controller, lane follower, YOLOv8 detection, driver) communicating via topics and CAN bus.", "Sensor fusion of ZED stereo camera + pose stream for vision and forward-motion verification."]
     },
-    wolfcafe: { t: "PROJECT // WOLFCAFE FULL-STACK WEB APP", dur: "Java · SQL · React · Spring Boot · Hibernate", bullets: ["Built React components integrated with Spring Boot REST APIs.", "Real-time order processing with MySQL/Hibernate integration.", "Implemented role-based access control and order state machine."] },
-    hacknc: { t: "PROJECT // HACKNC 2025 — HEALTH PLATFORM", dur: "Java · PostgreSQL · Next.js · Docker", bullets: ["Built full-stack health platform within 24-hour hackathon.", "Shipped 8+ REST API endpoints covering patient data and scheduling.", "Containerized backend and database using Docker Compose."] },
-    fingerprint: { t: "PROJECT // FINGERPRINT AUTHENTICATION SYSTEM", dur: "Python · OpenCV · scikit-learn · NumPy · Matplotlib", bullets: [
-        "High-performance biometric system performing 1:N open-set identification across 500 unique identities.",
-        "Preprocessing: Median Blur for noise reduction + CLAHE for ridge contrast enhancement.",
-        "Implemented RootSIFT (SIFT + Hellinger kernel) for robust local feature descriptors on ridge texture.",
-        "Hybrid scoring: fuses RootSIFT match counts with global intensity-histogram cosine similarity.",
-        "Open-set logic: tuned threshold 28.5 + top-1/top-2 margin 1.6 to label imposters as 'Unknown'.",
-        "Auto-generates ROC curves, normalized confusion matrices, and F1/precision/recall dashboards.",
-        "Achieves AUC = 0.95 on the validation set — strong genuine vs. imposter separability.",
-        "Team: Edward Feng (sfeng9), Jaewoo Bae (jbae7) — CSC591 Cyber-Physical Systems for Biometrics @ NCSU."
-    ] }
+    wolfcafe: {
+        t: "PROJECT // WOLFCAFE — FULL-STACK ORDERING PLATFORM",
+        dur: "Spring Boot (Java) · React · MySQL / Hibernate · JWT · Agile Team of 6 · Aug – Dec 2025 · NCSU",
+        wide: true,
+        html: `
+        <!-- Skills -->
+        <div class="pd-section">
+            <div class="pd-section-title"><span class="pd-chip">SKILLS</span> Tech stack</div>
+            <div class="pd-badges">
+                <span class="pd-badge lime">Java</span>
+                <span class="pd-badge lime">Spring Boot</span>
+                <span class="pd-badge lime">Spring Security</span>
+                <span class="pd-badge lime">JWT</span>
+                <span class="pd-badge">React (Vite)</span>
+                <span class="pd-badge">Axios</span>
+                <span class="pd-badge">MySQL</span>
+                <span class="pd-badge">Hibernate / JPA</span>
+                <span class="pd-badge">Maven</span>
+                <span class="pd-badge">GitHub Projects (Agile)</span>
+            </div>
+        </div>
+
+        <!-- Brief summary -->
+        <div class="pd-text">
+            <p>An end-to-end <strong style="color:var(--lime)">café ordering platform</strong> built over a full semester with a 6-person Agile team. Customers browse a menu, build orders with tax and tip calculations, and check out — while Staff fulfill orders and manage inventory, and Admins control users, recipes, and tax configuration. The whole flow is secured by <strong style="color:var(--cyan)">JWT authentication</strong> and <strong style="color:var(--cyan)">role-based access control</strong> at every REST endpoint, backed by a normalized MySQL schema through Hibernate.</p>
+        </div>
+
+        <!-- Headline metrics -->
+        <div class="pd-metric-row">
+            <div class="pd-metric"><div class="pd-metric-num">6</div><div class="pd-metric-label">AGILE TEAM SIZE</div></div>
+            <div class="pd-metric"><div class="pd-metric-num">3</div><div class="pd-metric-label">USER ROLES</div></div>
+            <div class="pd-metric"><div class="pd-metric-num">6</div><div class="pd-metric-label">REST CONTROLLERS</div></div>
+            <div class="pd-metric"><div class="pd-metric-num">JWT</div><div class="pd-metric-label">STATELESS AUTH</div></div>
+        </div>
+
+        <!-- Roles -->
+        <div class="pd-section">
+            <div class="pd-section-title"><span class="pd-chip">ROLES</span> Three personas, three workflows</div>
+            <div class="pd-arch">
+                <div class="pd-node">
+                    <div class="pd-node-name">🛒 Customer</div>
+                    <div class="pd-node-desc">Registers, logs in, browses items, builds an order from the menu, reviews tax + tip + total, places the order, and tracks its status. Sees only their own order history.</div>
+                    <div class="pd-node-flow">→ register → login → browse → checkout → my orders</div>
+                </div>
+                <div class="pd-node">
+                    <div class="pd-node-name">👨‍🍳 Staff</div>
+                    <div class="pd-node-desc">Sees the live order queue, fulfills orders, and manages inventory + ingredients so recipes have what they need to be produced. Cannot manage users or tax config.</div>
+                    <div class="pd-node-flow">→ list orders → fulfill → manage inventory</div>
+                </div>
+                <div class="pd-node">
+                    <div class="pd-node-name">🛡 Admin</div>
+                    <div class="pd-node-desc">Owns the whole system: manages users (create / edit staff accounts), configures recipes and items, sets the tax rate, and registers staff. Granted via Spring Security's role checks.</div>
+                    <div class="pd-node-flow">→ manage users · recipes · items · tax</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Architecture -->
+        <div class="pd-section">
+            <div class="pd-section-title"><span class="pd-chip">ARCHITECTURE</span> Backend ↔ Frontend</div>
+            <div class="pd-arch">
+                <div class="pd-node">
+                    <div class="pd-node-name">🎨 React Frontend (Vite)</div>
+                    <div class="pd-node-desc">20+ components covering login, registration (customer + staff), item & recipe management, inventory, order creation, order lists, user management, and tax configuration. Talks to the backend through a dedicated service layer using Axios.</div>
+                    <div class="pd-node-flow">→ LoginComponent · CreateOrderComponent · ListOrdersComponent · …</div>
+                </div>
+                <div class="pd-node">
+                    <div class="pd-node-name">🧱 Spring Boot REST Layer</div>
+                    <div class="pd-node-desc">Six controllers expose the API surface: <code>AuthController</code> (register / login / JWT), <code>ItemController</code>, <code>RecipeController</code>, <code>IngredientController</code>, <code>OrderController</code>, <code>TaxController</code>. Each method is guarded by Spring Security with role-based annotations.</div>
+                    <div class="pd-node-flow">→ /api/auth · /api/items · /api/recipes · /api/orders · …</div>
+                </div>
+                <div class="pd-node">
+                    <div class="pd-node-name">🔐 JWT Security Pipeline</div>
+                    <div class="pd-node-desc">Custom <code>JwtTokenProvider</code>, <code>JwtAuthenticationFilter</code>, and <code>JwtAuthenticationEntryPoint</code> sign and validate tokens; <code>CustomUserDetailsService</code> resolves principals from the DB. Every request runs through the filter chain so role checks can be enforced statelessly.</div>
+                    <div class="pd-node-flow">→ stateless auth, Bearer tokens, role claims</div>
+                </div>
+                <div class="pd-node">
+                    <div class="pd-node-name">🗄 MySQL + Hibernate</div>
+                    <div class="pd-node-desc">Normalized schema: <code>User</code>, <code>Role</code>, <code>Item</code>, <code>Recipe</code>, <code>RecipeIngredient</code>, <code>Ingredient</code>, <code>Order</code>, <code>Tax</code>. Hibernate / JPA maps each entity; DTO + Mapper layers keep API payloads decoupled from the persistence model.</div>
+                    <div class="pd-node-flow">→ entities → DTOs → JSON payloads</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Case study -->
+        <div class="pd-section">
+            <div class="pd-section-title"><span class="pd-chip">CASE STUDY</span> Problem · Process · Results</div>
+            <div class="pd-case">
+                <div class="pd-case-card problem">
+                    <h4>▌ THE PROBLEM</h4>
+                    <ul>
+                        <li>Multi-role ordering system: Admin / Staff / Customer with different views.</li>
+                        <li>Real-time tax + tip math at checkout — must match server-side.</li>
+                        <li>Order lifecycle from browse → cart → place → fulfill → done.</li>
+                        <li>Inventory has to gate which recipes are available.</li>
+                        <li>6 people, one repo, one semester — needs ruthless coordination.</li>
+                    </ul>
+                </div>
+                <div class="pd-case-card process">
+                    <h4>▌ THE PROCESS</h4>
+                    <ul>
+                        <li><strong>Agile in GitHub Projects:</strong> sprint board, issues, PR-based reviews.</li>
+                        <li><strong>JWT auth + RBAC:</strong> Spring Security guards each endpoint by role.</li>
+                        <li><strong>Service / Mapper layering:</strong> DTOs keep API payloads stable as entities evolve.</li>
+                        <li><strong>Tax controller</strong> as the single source of truth — frontend reads it for real-time totals.</li>
+                        <li><strong>React service layer</strong> centralizes Axios calls so token + base URL live in one place.</li>
+                    </ul>
+                </div>
+                <div class="pd-case-card results">
+                    <h4>▌ THE RESULTS</h4>
+                    <ul>
+                        <li>Full Customer → Staff → Admin workflow shipping end-to-end.</li>
+                        <li>20+ React components driving every screen of the app.</li>
+                        <li>6 REST controllers, all role-guarded, all stateless via JWT.</li>
+                        <li>Inventory ↔ recipe coupling prevents staff from fulfilling impossible orders.</li>
+                        <li>Predictable, testable order math (tax + tip + total) shared across frontend and backend.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deep dive -->
+        <div class="pd-section">
+            <div class="pd-section-title"><span class="pd-chip">DEEP DIVE</span> Decisions that shaped the codebase</div>
+            <div class="pd-text">
+                <p>🔐 <strong style="color:var(--lime)">Stateless JWT instead of session cookies.</strong> A token-based filter chain (<code>JwtAuthenticationFilter</code> + <code>JwtTokenProvider</code>) lets the same backend serve a React SPA, a future mobile client, or anything else that can attach a Bearer header — no sticky sessions needed.</p>
+                <p>🧱 <strong style="color:var(--lime)">DTO + Mapper between the API and the DB.</strong> Controllers never expose JPA entities directly. Each domain has a DTO and a mapper, so renaming a column or splitting an entity doesn't break the wire format.</p>
+                <p>🧾 <strong style="color:var(--lime)">Tax as its own controller.</strong> Centralizing tax in a dedicated <code>TaxController</code> + <code>Tax</code> entity means the rate is changed in exactly one place — the cashier UI, customer cart, and order persistence all read the same value at checkout.</p>
+                <p>🥣 <strong style="color:var(--lime)">Recipes constrained by inventory.</strong> A recipe is a join of <code>Item</code> + a collection of <code>RecipeIngredient</code> rows. Staff inventory edits propagate to what customers can actually order — no phantom menu items.</p>
+                <p>👥 <strong style="color:var(--lime)">Two registration flows.</strong> Public customer signup vs. admin-only staff registration are deliberately separate components (<code>RegisterCustomerComponent</code> / <code>RegisterStaffComponent</code>) — different forms, different protected endpoints, different role assignment.</p>
+                <p>🧰 <strong style="color:var(--lime)">React service layer.</strong> All Axios calls live under <code>src/services/</code>. Components stay focused on UI; auth header injection and error handling happen in one place.</p>
+            </div>
+        </div>
+
+        <!-- Team / process -->
+        <div class="pd-section">
+            <div class="pd-section-title"><span class="pd-chip">TEAM</span> Working as 6 in one repo</div>
+            <div class="pd-text">
+                <p>Agile team of 6, sprint planning + issue tracking in <strong>GitHub Projects</strong>, pull-request reviews on every change. End-to-end ownership of the order workflow — from browse to checkout to fulfillment — required tight contract discipline between the React and Spring Boot sides, which the DTO / service layering made tractable.</p>
+                <p>Context: <strong>CSC326 — Software Engineering</strong> @ NC State University, Aug – Dec 2025.</p>
+            </div>
+        </div>
+        `,
+        bullets: [
+            "Full-stack café ordering platform — Customer / Staff / Admin roles in a 6-person Agile team.",
+            "Spring Boot backend with 6 REST controllers (Auth, Item, Recipe, Ingredient, Order, Tax) over MySQL + Hibernate.",
+            "JWT auth pipeline (JwtTokenProvider, JwtAuthenticationFilter) for stateless, role-guarded endpoints.",
+            "20+ React components driving login, ordering with tax/tip math, inventory, and admin user/recipe/tax management.",
+            "CSC326 — Software Engineering @ NCSU, Aug – Dec 2025."
+        ]
+    },
+    hacknc: {
+        t: "PROJECT // HACKNC 2025 — YOUR PT (PERSONAL FITNESS PLATFORM)",
+        dur: "Spring Boot (Java 21) · Next.js · PostgreSQL · Docker Compose · 24-hour Hackathon",
+        wide: true,
+        html: `
+        <!-- Skills -->
+        <div class="pd-section">
+            <div class="pd-section-title"><span class="pd-chip">SKILLS</span> Tech stack</div>
+            <div class="pd-badges">
+                <span class="pd-badge lime">Java 21</span>
+                <span class="pd-badge lime">Spring Boot</span>
+                <span class="pd-badge lime">REST APIs</span>
+                <span class="pd-badge">Next.js</span>
+                <span class="pd-badge">React</span>
+                <span class="pd-badge">PostgreSQL</span>
+                <span class="pd-badge">Docker Compose</span>
+                <span class="pd-badge">JPA / Hibernate</span>
+                <span class="pd-badge">CORS</span>
+            </div>
+        </div>
+
+        <!-- Brief summary -->
+        <div class="pd-text">
+            <p><strong style="color:var(--lime)">Your PT</strong> — your no-nonsense fitness friend that tracks BMI, diet, and workouts without judgment (well, maybe just a little). A full-stack personal-fitness platform built end-to-end inside a <strong style="color:var(--cyan)">24-hour hackathon</strong>: <strong>8+ REST endpoints</strong> in Spring Boot, real-time BMI tracking on a Next.js frontend, PostgreSQL for persistence, and a 2-service Docker Compose stack so any teammate could spin the whole thing up with one command. Shipped a working prototype by submission deadline.</p>
+        </div>
+
+        <!-- Headline metrics -->
+        <div class="pd-metric-row">
+            <div class="pd-metric"><div class="pd-metric-num">24 h</div><div class="pd-metric-label">HACKATHON BUILD</div></div>
+            <div class="pd-metric"><div class="pd-metric-num">8+</div><div class="pd-metric-label">REST ENDPOINTS</div></div>
+            <div class="pd-metric"><div class="pd-metric-num">2</div><div class="pd-metric-label">DOCKER SERVICES</div></div>
+            <div class="pd-metric"><div class="pd-metric-num">1 cmd</div><div class="pd-metric-label"><code>docker compose up</code></div></div>
+        </div>
+
+        <!-- Inspiration -->
+        <div class="pd-section">
+            <div class="pd-section-title"><span class="pd-chip">INSPIRATION</span> Why this project</div>
+            <div class="pd-text">
+                <p>Managing diet and exercise consistently is hard — especially for students and professionals juggling everything else. We wanted a single place that turns scattered health data into <strong style="color:var(--lime)">data-driven decisions</strong>: a platform that encourages healthy habits through interactive tracking and personalized feedback, without the noise of typical fitness apps.</p>
+                <p>Smarter than your gym mirror, friendlier than your scale.</p>
+            </div>
+        </div>
+
+        <!-- Architecture -->
+        <div class="pd-section">
+            <div class="pd-section-title"><span class="pd-chip">ARCHITECTURE</span> How the pieces fit together</div>
+            <div class="pd-arch">
+                <div class="pd-node">
+                    <div class="pd-node-name">🧱 Backend — Spring Boot (Java 21)</div>
+                    <div class="pd-node-desc">8+ REST endpoints covering user accounts, BMI tracking, diet logging, and workout entries. Authentication, validation, and data-access logic all live here. JPA / Hibernate over PostgreSQL handles persistence.</div>
+                    <div class="pd-node-flow">→ /api/users · /api/bmi · /api/diet · /api/workouts · …</div>
+                </div>
+                <div class="pd-node">
+                    <div class="pd-node-name">🎨 Frontend — Next.js</div>
+                    <div class="pd-node-desc">Interactive UI with real-time BMI tracking, charts, and personalized feedback. Calls the Spring Boot API directly; results render immediately as the user logs entries.</div>
+                    <div class="pd-node-flow">→ talks to backend over fetch / axios</div>
+                </div>
+                <div class="pd-node">
+                    <div class="pd-node-name">🗄 Database — PostgreSQL</div>
+                    <div class="pd-node-desc">Single source of truth for users and their health data (BMI snapshots, diet entries, workout logs). Volume-mounted so data persists across container rebuilds.</div>
+                    <div class="pd-node-flow">→ tables for users, bmi_logs, diet, workouts</div>
+                </div>
+                <div class="pd-node">
+                    <div class="pd-node-name">🐳 Deployment — Docker Compose</div>
+                    <div class="pd-node-desc">2-service stack (<code>backend</code> + <code>db</code>) wired together over a private bridge network. <code>docker compose up</code> brings the whole platform online in one command — identical environments for every teammate, no "works on my machine" drama during a 24-hour sprint.</div>
+                    <div class="pd-node-flow">→ unified dev + demo environment</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Case study -->
+        <div class="pd-section">
+            <div class="pd-section-title"><span class="pd-chip">CASE STUDY</span> Problem · Process · Results</div>
+            <div class="pd-case">
+                <div class="pd-case-card problem">
+                    <h4>▌ THE PROBLEM</h4>
+                    <ul>
+                        <li>24h to ship a real, working full-stack health app.</li>
+                        <li>Multiple contributors, multiple machines, multiple stacks.</li>
+                        <li>Frontend ↔ backend across origins → CORS friction.</li>
+                        <li>Container rebuilds were wiping local user data.</li>
+                        <li>Need a clean, intuitive UI that non-engineers can use.</li>
+                    </ul>
+                </div>
+                <div class="pd-case-card process">
+                    <h4>▌ THE PROCESS</h4>
+                    <ul>
+                        <li>Defined <strong>8+ REST endpoints</strong> upfront so frontend + backend could move in parallel.</li>
+                        <li>Wrapped both services in <strong>Docker Compose</strong> for one-command spin-up.</li>
+                        <li>Configured CORS in Spring Boot to whitelist the Next.js origin.</li>
+                        <li>Mounted a Postgres volume so data <strong>survives container rebuilds</strong>.</li>
+                        <li>Iterated UI in Next.js with real API responses (no mocks) from hour one.</li>
+                    </ul>
+                </div>
+                <div class="pd-case-card results">
+                    <h4>▌ THE RESULTS</h4>
+                    <ul>
+                        <li>Fully working end-to-end prototype submitted by the deadline.</li>
+                        <li>Real-time BMI tracking + diet/workout logging in the browser.</li>
+                        <li><code>docker compose up</code> = full stack on any teammate's laptop.</li>
+                        <li>No CORS, no env conflicts, no data loss between rebuilds during demo prep.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- What we learned -->
+        <div class="pd-section">
+            <div class="pd-section-title"><span class="pd-chip">LEARNED</span> Takeaways from the sprint</div>
+            <div class="pd-text">
+                <p>📦 <strong style="color:var(--lime)">Full-stack delivery in 24h</strong> is achievable when you front-load the API contract — endpoints first, then frontend + backend implementations in parallel.</p>
+                <p>🐳 <strong style="color:var(--lime)">Containerization isn't optional</strong> when several people are building at the same time. Docker Compose collapsed the "setup my environment" tax to a single command.</p>
+                <p>🌐 <strong style="color:var(--lime)">REST + clear payloads</strong> let the Next.js team ship UI without waiting for backend changes — both sides progressed independently against the contract.</p>
+                <p>🗂 <strong style="color:var(--lime)">State persistence is a first-class concern.</strong> Volume mounts on the Postgres service kept user data alive across rebuilds, which mattered when the demo was 30 minutes away.</p>
+            </div>
+        </div>
+
+        <!-- Challenges deep-dive -->
+        <div class="pd-section">
+            <div class="pd-section-title"><span class="pd-chip">CHALLENGES</span> Specific friction & how we resolved it</div>
+            <div class="pd-text">
+                <p>🔌 <strong style="color:var(--lime)">Inter-container communication.</strong> The backend couldn't reach the database via <code>localhost</code> inside Docker — services have to address each other by service name (<code>db</code>) over the Compose network. Fixed by switching the Spring Boot datasource URL to <code>jdbc:postgresql://db:5432/...</code>.</p>
+                <p>🛡 <strong style="color:var(--lime)">CORS between frontend and backend.</strong> Different ports → preflight failures. Resolved by whitelisting the Next.js dev origin in Spring's CORS config and allowing the credentials/methods the frontend actually used.</p>
+                <p>💾 <strong style="color:var(--lime)">Data loss on container rebuild.</strong> Default Postgres images lose state when the container is recreated. Mounted a named volume to <code>/var/lib/postgresql/data</code> so user data survives every rebuild.</p>
+                <p>🎨 <strong style="color:var(--lime)">Clean, intuitive UI under time pressure.</strong> Designed in Next.js with reusable components and a consistent visual hierarchy — BMI tracker on top, diet/workout entries below — so the product still felt cohesive at submission, not slapped together.</p>
+            </div>
+        </div>
+        `,
+        bullets: [
+            "Built 'Your PT' — a full-stack personal-fitness platform end-to-end in a 24-hour hackathon.",
+            "8+ Spring Boot REST endpoints + Next.js frontend + PostgreSQL persistence.",
+            "Containerized as a 2-service Docker Compose stack — full app spins up with one command.",
+            "Resolved cross-container DB networking, frontend↔backend CORS, and Postgres volume persistence."
+        ]
+    },
+    fingerprint: {
+        t: "PROJECT // FINGERPRINT AUTHENTICATION SYSTEM",
+        dur: "Python · OpenCV · NumPy · Matplotlib · CSC591 @ NCSU",
+        wide: true,
+        html: `
+        <!-- Skills -->
+        <div class="pd-section">
+            <div class="pd-section-title"><span class="pd-chip">SKILLS</span> Tech stack</div>
+            <div class="pd-badges">
+                <span class="pd-badge lime">Python 3</span>
+                <span class="pd-badge lime">OpenCV</span>
+                <span class="pd-badge lime">NumPy</span>
+                <span class="pd-badge">SIFT / RootSIFT</span>
+                <span class="pd-badge">CLAHE</span>
+                <span class="pd-badge">Brute-Force Matcher (L2)</span>
+                <span class="pd-badge">Matplotlib</span>
+                <span class="pd-badge">Open-Set 1:N Identification</span>
+            </div>
+        </div>
+
+        <!-- Brief summary -->
+        <div class="pd-text">
+            <p>An <strong style="color:var(--lime)">open-set 1:N fingerprint identification</strong> system that enrolls users from a training fold of fingerprint images and identifies probe fingerprints against the gallery — or rejects them as <code>Unknown</code> if no enrolled identity matches confidently. Built on classical computer-vision primitives in OpenCV: <strong style="color:var(--cyan)">RootSIFT</strong> local descriptors fused with a global intensity histogram, scored against a multi-template gallery, and gated by a tuned threshold + runner-up margin so impostors don't get accepted by accident.</p>
+        </div>
+
+        <!-- Headline metrics -->
+        <div class="pd-metric-row">
+            <div class="pd-metric"><div class="pd-metric-num">1 : N</div><div class="pd-metric-label">OPEN-SET ID</div></div>
+            <div class="pd-metric"><div class="pd-metric-num">RootSIFT</div><div class="pd-metric-label">+ HISTOGRAM FUSION</div></div>
+            <div class="pd-metric"><div class="pd-metric-num">Top-2</div><div class="pd-metric-label">TEMPLATES / IDENTITY</div></div>
+            <div class="pd-metric"><div class="pd-metric-num">28.5 / 1.6</div><div class="pd-metric-label">THRESHOLD · MARGIN</div></div>
+        </div>
+
+        <!-- Pipeline overview -->
+        <div class="pd-section">
+            <div class="pd-section-title"><span class="pd-chip">PIPELINE</span> How a probe gets identified</div>
+            <div class="pd-arch">
+                <div class="pd-node">
+                    <div class="pd-node-name">① Preprocessing</div>
+                    <div class="pd-node-desc">Median blur (kernel 3) to suppress sensor noise without smoothing ridges, then CLAHE (clipLimit 2.0, 8×8 tiles) to lift the local contrast of valleys vs. ridges, then min-max normalize to [0, 255]. Cleaner ridges → more stable keypoints downstream.</div>
+                    <div class="pd-node-flow">→ enhanced grayscale image</div>
+                </div>
+                <div class="pd-node">
+                    <div class="pd-node-name">② Feature Extraction</div>
+                    <div class="pd-node-desc">SIFT detector (up to 500 keypoints) + a <strong style="color:var(--lime)">RootSIFT transform</strong> (L1 normalize → element-wise √ → L2 normalize) to make L2 distance behave like the Hellinger kernel — known to match ridge texture far better than raw SIFT. A 128-bin global intensity histogram is computed in parallel for the fusion step.</div>
+                    <div class="pd-node-flow">→ {sift: descriptors, hist: histogram}</div>
+                </div>
+                <div class="pd-node">
+                    <div class="pd-node-name">③ Hybrid Scoring</div>
+                    <div class="pd-node-desc">Brute-force L2 matcher with cross-check returns inlier matches; each match within distance 255 counts as one strong RootSIFT vote. A histogram cosine bonus <code>150 · max(0, cos(h₁,h₂) − 0.965)</code> is added on top — a soft global-appearance prior that lifts the score only when both signals agree.</div>
+                    <div class="pd-node-flow">→ score = #strong_matches + hist_bonus</div>
+                </div>
+                <div class="pd-node">
+                    <div class="pd-node-name">④ Open-Set Decision</div>
+                    <div class="pd-node-desc">For each enrolled identity, take the best score across its top-2 stored templates (richest by SIFT count). Rank all identities. Accept the top one only if (a) its score ≥ <strong>28.5</strong> AND (b) it beats the runner-up by ≥ <strong>1.6</strong>. Otherwise output <code>Unknown</code>.</div>
+                    <div class="pd-node-flow">→ pred_id ∈ {known IDs, "Unknown"}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Case study -->
+        <div class="pd-section">
+            <div class="pd-section-title"><span class="pd-chip">CASE STUDY</span> Problem · Process · Results</div>
+            <div class="pd-case">
+                <div class="pd-case-card problem">
+                    <h4>▌ THE PROBLEM</h4>
+                    <ul>
+                        <li>Match a probe fingerprint to one of <em>many</em> enrolled identities — or reject it.</li>
+                        <li>Raw SIFT struggles on noisy ridge texture.</li>
+                        <li>Single-template galleries miss valid genuine matches.</li>
+                        <li>Naive thresholds let impostors slip in as a known identity.</li>
+                    </ul>
+                </div>
+                <div class="pd-case-card process">
+                    <h4>▌ THE PROCESS</h4>
+                    <ul>
+                        <li><strong>Cleaner ridges:</strong> median blur + CLAHE before features.</li>
+                        <li><strong>RootSIFT</strong> (Hellinger-kernel SIFT) for textured surfaces.</li>
+                        <li><strong>Hybrid scoring:</strong> RootSIFT match count + cosine-histogram bonus.</li>
+                        <li><strong>Multi-template gallery:</strong> top-2 enrolled templates per identity.</li>
+                        <li><strong>Margin gate:</strong> require runner-up gap ≥ 1.6 to accept.</li>
+                    </ul>
+                </div>
+                <div class="pd-case-card results">
+                    <h4>▌ THE RESULTS</h4>
+                    <ul>
+                        <li>Robust 1:N identification on a held-out probe set.</li>
+                        <li>Auto-emits a confusion-counts + Acc/P/R/F1 dashboard PNG.</li>
+                        <li>Impostors land in <code>Unknown</code> instead of a wrong identity.</li>
+                        <li>Per-probe latency dominated by SIFT + BF match — runs on a laptop CPU.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Implementation deep-dive -->
+        <div class="pd-section">
+            <div class="pd-section-title"><span class="pd-chip">DEEP DIVE</span> Tricks that lifted accuracy</div>
+            <div class="pd-text">
+                <p>🌱 <strong style="color:var(--lime)">RootSIFT over raw SIFT.</strong> A short L1-normalize → √ → L2-normalize transform turns plain SIFT descriptors into Hellinger-kernel descriptors. L2 distance after the transform behaves like Hellinger distance on the original — a small change in <code>feature_extraction.py</code> with a measurable bump in match quality on ridge patterns.</p>
+                <p>📊 <strong style="color:var(--lime)">Histogram fusion as a tie-breaker, not a scorer.</strong> The intensity-histogram cosine bonus only kicks in past a baseline of 0.965, weighted ×150. Below that, it contributes nothing. So global appearance only votes when it strongly agrees — it never overrides a confident SIFT decision.</p>
+                <p>🗂 <strong style="color:var(--lime)">Top-2 templates per identity.</strong> Instead of comparing a probe against every enrolled image (slow) or just one (brittle), the gallery keeps the top 2 templates per ID — ranked by SIFT keypoint count. Recovers genuine matches that depend on which finger angle was enrolled.</p>
+                <p>🚪 <strong style="color:var(--lime)">Two-step open-set gate.</strong> A single threshold isn't enough — sometimes an impostor scores higher than a noisy genuine. Adding a <em>runner-up margin</em> on top of the absolute threshold is the cheap trick that pushes ambiguous probes into <code>Unknown</code> instead of accepting them.</p>
+                <p>🧪 <strong style="color:var(--lime)">Reproducible eval.</strong> <code>main.py</code> rebuilds the gallery from <code>data/train</code>, runs every probe in <code>data/test</code> through the full pipeline, computes the confusion matrix + accuracy / precision / recall / F1, and writes <code>evaluation_plot.png</code> automatically — same chart every run, no manual steps.</p>
+            </div>
+        </div>
+
+        <!-- Architecture / file map -->
+        <div class="pd-section">
+            <div class="pd-section-title"><span class="pd-chip">CODE MAP</span> Where each piece lives</div>
+            <div class="pd-text">
+                <p><code>src/preprocessing.py</code> — <em>median blur → CLAHE → normalize</em>.</p>
+                <p><code>src/feature_extraction.py</code> — SIFT @ 500 keypoints + RootSIFT transform + L2-normalized 128-bin intensity histogram.</p>
+                <p><code>src/verification.py</code> — hybrid score (RootSIFT BF matches + histogram cosine bonus); 1:N <code>identify_user</code> with threshold + runner-up margin.</p>
+                <p><code>src/evaluation.py</code> — confusion-matrix counter (TP / FP / TN / FN) + accuracy.</p>
+                <p><code>main.py</code> — orchestrates enroll → identify → metrics → plot. Toggle <code>FPS_FULL_GALLERY=1</code> to use every enrolled template, or <code>FPS_TOP_TEMPLATES=N</code> to change the per-identity cap.</p>
+            </div>
+        </div>
+
+        <!-- Team / context -->
+        <div class="pd-section">
+            <div class="pd-section-title"><span class="pd-chip">TEAM</span> Context</div>
+            <div class="pd-text">
+                <p>Built with <strong style="color:var(--lime)">Edward Feng (sfeng9)</strong> and <strong style="color:var(--lime)">Jaewoo Bae (jbae7)</strong> for <strong>CSC591 — Cyber-Physical Systems for Biometrics</strong> at NC State University.</p>
+            </div>
+        </div>
+        `,
+        bullets: [
+            "Open-set 1:N fingerprint identification system in OpenCV / Python.",
+            "RootSIFT (Hellinger-kernel SIFT) descriptors fused with a 128-bin intensity-histogram cosine bonus.",
+            "Multi-template gallery (top-2 per identity) + threshold (28.5) + runner-up margin (1.6) for robust impostor rejection.",
+            "Auto-generates a confusion + Acc/P/R/F1 dashboard PNG every run.",
+            "Team: Edward Feng (sfeng9), Jaewoo Bae (jbae7) — CSC591 Cyber-Physical Systems for Biometrics @ NCSU."
+        ]
+    }
 };
 
 // Track scroll position so closing returns the user exactly where they were
@@ -1535,6 +2728,18 @@ let __preModalSectionId = 'projects';
 function openTerm(id) {
     const d = content[id];
     const modal = document.getElementById('zoom-modal');
+    const innerEl = modal.querySelector('.modal-inner');
+    // The previous open may have replaced .modal-inner with multi-window CRT
+    // markup. Restore the default single-body shell here so the m-title /
+    // m-body assignments below always have valid targets to write into.
+    if (!innerEl.querySelector('#m-title')) {
+        innerEl.innerHTML =
+            '<div class="modal-titlebar">' +
+                '<span class="modal-titlebar-text" id="m-title">LOADING...</span>' +
+                '<div class="modal-titlebar-btns"><span class="close-x" onclick="closeTerm()">X</span></div>' +
+            '</div>' +
+            '<div class="modal-body" id="m-body"></div>';
+    }
     document.getElementById('m-title').innerText = d.t;
     // Remember which section this modal was opened from so closeTerm can return there.
     __preModalSectionId = CONTENT_SECTION[id] || 'projects';
@@ -1542,13 +2747,72 @@ function openTerm(id) {
     const body = d.html
         ? `<div class="duration-line">⏱ ${d.dur}</div>${d.html}<br><button class="modal-close-btn" onclick="closeTerm()">[ CLOSE ]</button>`
         : `<div class="duration-line">⏱ ${d.dur}</div>
-           ${d.bullets.map(b => `<div class="prompt-line"><span class="prompt-arrow">▶</span><span>${b}</span></div>`).join('')}
+           ${(d.bullets || []).map(b => `<div class="prompt-line"><span class="prompt-arrow">▶</span><span>${b}</span></div>`).join('')}
            <br><button class="modal-close-btn" onclick="closeTerm()">[ CLOSE ]</button>`;
     document.getElementById('m-body').innerHTML = body;
 
     // Toggle full-screen "wide" layout for case-study projects
     if (d.wide) modal.classList.add('wide');
     else        modal.classList.remove('wide');
+
+    // Experience modals use the retro-PC (CRT) skin so they visually match
+    // the desktop computers the user just clicked on.
+    const typedEl = document.getElementById('crt-typed-title');
+    if (CONTENT_SECTION[id] === 'experience') {
+        modal.classList.add('crt');
+
+        // Render multiple draggable .crt-window popups from d.windows.
+        // If an experience entry doesn't define windows yet, fall back to a
+        // single window built from its bullets list.
+        const wins = Array.isArray(d.windows) && d.windows.length
+            ? d.windows
+            : [{
+                title: 'EXPERIENCE_DETAILS.txt',
+                body: `<div class="duration-line">⏱ ${d.dur}</div>` +
+                      (d.bullets || []).map(b =>
+                        `<div class="prompt-line"><span class="prompt-arrow">▶</span><span>${b}</span></div>`
+                      ).join('')
+            }];
+
+        // Default staggered positions so all windows are visible on open.
+        // Cycles through these for entries with more than 6 windows.
+        const offsets = [
+            { x: '-340px', y: '0px'   },
+            { x: '0px',    y: '60px'  },
+            { x: '340px',  y: '120px' },
+            { x: '-340px', y: '320px' },
+            { x: '0px',    y: '380px' },
+            { x: '340px',  y: '440px' }
+        ];
+        innerEl.innerHTML = '<div class="crt-canvas-wrap"><div class="crt-canvas">' + wins.map((w, i) => {
+            const off = offsets[i % offsets.length];
+            // --w-x is positioned against the 4500px canvas; calc(50% + offset)
+            // resolves to canvas-center + offset, so the three windows fan out
+            // around the middle of the workspace.
+            return `
+                <div class="crt-window" data-win-i="${i}"
+                     style="--w-x: calc(50% + ${off.x}); --w-y: ${off.y}; z-index: ${10 + (wins.length - 1 - i)};">
+                    <div class="crt-window-handle" data-drag>
+                        <span class="crt-drag-dots"><span></span><span></span><span></span></span>
+                        <span class="crt-drag-label">${w.title}</span>
+                        <button class="crt-min-btn" type="button" aria-label="Minimize" title="Minimize">[ _ ]</button>
+                    </div>
+                    <div class="crt-window-body">${w.body}</div>
+                    <div class="crt-resize-handle" data-resize aria-label="Resize"></div>
+                </div>`;
+        }).join('') + '</div></div>';
+
+        // Pull the role part of the title (after the "//") — e.g.
+        // "NC STATE UNIVERSITY // SOFTWARE ENGINEER" → "SOFTWARE ENGINEER"
+        const rawTitle = (d.t || '').split('//').pop().trim() || (d.t || '');
+        typedEl.textContent = rawTitle;
+        typedEl.style.setProperty('--typed-len', String(rawTitle.length));
+        typedEl.style.animation = 'none';
+        typedEl.style.width = '0';
+    } else {
+        modal.classList.remove('crt');
+        typedEl.textContent = '';
+    }
 
     // Snapshot scroll, lock body so the page can't move while modal is open
     __preModalScrollY = window.scrollY || 0;
@@ -1560,6 +2824,39 @@ function openTerm(id) {
     modal.style.display = 'flex';
     modal.scrollTop = 0;
     requestAnimationFrame(() => modal.classList.add('visible'));
+
+    // Measure & start the typewriter AFTER the modal is on-screen so that
+    // scrollWidth reflects the real rendered text width.
+    if (modal.classList.contains('crt')) {
+        // Reset zoom to 100% for each open and center the canvas in the viewport.
+        requestAnimationFrame(() => {
+            const innerEl = modal.querySelector('.modal-inner');
+            const wrap    = innerEl && innerEl.querySelector('.crt-canvas-wrap');
+            if (innerEl) innerEl.style.setProperty('--zoom', 1);
+            const resetLabel = document.getElementById('crt-zoom-reset');
+            if (resetLabel) resetLabel.textContent = '100%';
+            if (innerEl && wrap) {
+                innerEl.scrollLeft = Math.max(0, (wrap.offsetWidth  - innerEl.clientWidth ) / 2);
+                innerEl.scrollTop  = 0;
+            }
+        });
+        requestAnimationFrame(() => {
+            const t = document.getElementById('crt-typed-title');
+            if (!t || !t.textContent) return;
+            // Measure with width:auto + visibility:hidden so users don't see a flash
+            t.style.animation = 'none';
+            t.style.width = 'auto';
+            t.style.visibility = 'hidden';
+            const measuredW = t.scrollWidth + 6;   // +6px buffer for caret
+            t.style.width = '0';                   // collapse before animation starts
+            t.style.visibility = '';
+            t.style.setProperty('--typed-w', measuredW + 'px');
+            // eslint-disable-next-line no-unused-expressions
+            t.offsetWidth;                         // reflow → restart animation
+            t.style.animation = '';
+            t.style.width = '';                    // hand control back to CSS
+        });
+    }
 
     // Lazy-load videos: attach src only when scrolled into view; pause others on play.
     const videos = modal.querySelectorAll('video[data-src]');
@@ -1594,6 +2891,7 @@ function closeTerm() {
     setTimeout(() => {
         modal.style.display = 'none';
         modal.classList.remove('wide');
+        modal.classList.remove('crt');
     }, 200);
 
     // Unlock body and restore the exact scroll position the user came from
@@ -1613,10 +2911,238 @@ function closeTerm() {
         }
     }
 }
+// Backdrop-click-to-close is disabled in CRT mode (the bezel IS the modal,
+// so clicking the gray frame must not dismiss the experience window).
+// In non-CRT (project) modals, the original click-outside behavior is kept.
 document.getElementById('zoom-modal').addEventListener('click', (e) => {
-    if (e.target === document.getElementById('zoom-modal')) closeTerm();
+    const modal = document.getElementById('zoom-modal');
+    if (modal.classList.contains('crt')) return;
+    if (e.target === modal) closeTerm();
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeTerm(); });
+
+// ── CRT modal: bezel close + per-window drag, minimize, z-order ──
+(function () {
+    const modal       = document.getElementById('zoom-modal');
+    const inner       = modal.querySelector('.modal-inner');
+    const bezelClose  = document.getElementById('crt-bezel-close');
+    if (!modal || !inner) return;
+
+    // Bezel-level close (top-right of the gray frame)
+    if (bezelClose) {
+        bezelClose.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeTerm();
+        });
+    }
+
+    // Per-pointer state machine: idle → drag | resize. Allows the same code
+    // path to drive both interactions without separate listeners.
+    let mode = 'idle';                  // 'idle' | 'drag' | 'resize'
+    let activeWin = null;
+    let activeGrip = null;              // the element that owns the pointer capture
+    let activePointerId = null;
+    let startX = 0, startY = 0;
+    let baseX = 0, baseY = 0;
+    let baseW = 0, baseH = 0;
+    let baseWY = 0;                     // initial --w-y offset of the dragged window
+    let zCounter = 100;
+
+    const readVar = (el, name) =>
+        parseFloat(getComputedStyle(el).getPropertyValue(name)) || 0;
+
+    // Current zoom (CSS scale on .crt-canvas). Pointer deltas are in viewport
+    // pixels — divide by zoom to convert into canvas-local pixels for
+    // --drag-x / --drag-y / inline width|height.
+    const getZoom = () => {
+        const v = parseFloat(getComputedStyle(inner).getPropertyValue('--zoom'));
+        return v && v > 0 ? v : 1;
+    };
+
+    const bringToFront = (win) => {
+        zCounter += 1;
+        win.style.zIndex = String(zCounter);
+    };
+
+    // Snapshot of where the dragged window starts (post-transform), so we can
+    // clamp every move against the .crt-canvas (the big workspace) bounding rect.
+    // The canvas is much wider/taller than the viewport, so dragging just makes
+    // the inner scroll — symmetric in all four directions.
+    let dragBoundsRect = null, dragWinRect = null;
+
+    inner.addEventListener('pointerdown', (e) => {
+        const win = e.target.closest('.crt-window');
+        if (!win) return;
+        bringToFront(win);
+
+        // Minimize button — let the click handler do the toggle, just don't start anything else.
+        if (e.target.closest('.crt-min-btn')) { e.stopPropagation(); return; }
+
+        // ── Resize: bottom-right grip
+        const resizeGrip = e.target.closest('.crt-resize-handle');
+        if (resizeGrip) {
+            mode = 'resize';
+            activeWin = win;
+            activeGrip = resizeGrip;
+            activePointerId = e.pointerId;
+            startX = e.clientX; startY = e.clientY;
+            const r = win.getBoundingClientRect();
+            const z = getZoom();
+            // Capture base size in CANVAS pixels — the inline width/height we
+            // write is in canvas units, scaled by transform afterwards.
+            baseW = r.width  / z;
+            baseH = r.height / z;
+            win.classList.add('resizing');
+            try { resizeGrip.setPointerCapture(e.pointerId); } catch (_) {}
+            e.preventDefault();
+            return;
+        }
+
+        // ── Drag: only when grabbing the gray title-bar
+        const handle = e.target.closest('.crt-window-handle');
+        if (!handle) return;
+
+        mode = 'drag';
+        activeWin = win;
+        activeGrip = handle;
+        activePointerId = e.pointerId;
+        startX = e.clientX; startY = e.clientY;
+        baseX = readVar(win, '--drag-x');
+        baseY = readVar(win, '--drag-y');
+        // Snapshot rects: clamp against the big .crt-canvas (so windows stay
+        // inside the workspace) — but the workspace itself is much larger than
+        // the viewport, so the scroll viewport (.modal-inner) handles bringing
+        // any out-of-view position into view via its scrollbars.
+        const canvas = inner.querySelector('.crt-canvas');
+        dragBoundsRect = (canvas || inner).getBoundingClientRect();
+        dragWinRect    = win.getBoundingClientRect();
+        win.classList.add('dragging');
+        try { handle.setPointerCapture(e.pointerId); } catch (_) {}
+        e.preventDefault();
+    });
+
+    inner.addEventListener('pointermove', (e) => {
+        if (mode === 'idle' || e.pointerId !== activePointerId || !activeWin) return;
+
+        const z = getZoom();
+
+        if (mode === 'drag') {
+            let dxV = e.clientX - startX;
+            let dyV = e.clientY - startY;
+            // Clamp in VIEWPORT space first (rects are viewport-coords).
+            if (dragBoundsRect && dragWinRect) {
+                const minDx = dragBoundsRect.left   - dragWinRect.left;
+                const maxDx = dragBoundsRect.right  - dragWinRect.right;
+                const minDy = dragBoundsRect.top    - dragWinRect.top;
+                const maxDy = dragBoundsRect.bottom - dragWinRect.bottom;
+                if (dxV < minDx) dxV = minDx;
+                if (dxV > maxDx) dxV = maxDx;
+                if (dyV < minDy) dyV = minDy;
+                if (dyV > maxDy) dyV = maxDy;
+            }
+            // Then convert to canvas-local pixels for --drag-x / --drag-y.
+            activeWin.style.setProperty('--drag-x', (baseX + dxV / z) + 'px');
+            activeWin.style.setProperty('--drag-y', (baseY + dyV / z) + 'px');
+
+            // Auto-scroll the viewport when the pointer nears its edges.
+            const ir = inner.getBoundingClientRect();
+            const EDGE = 50, STEP = 18;
+            if (e.clientX < ir.left  + EDGE) inner.scrollLeft -= STEP;
+            if (e.clientX > ir.right - EDGE) inner.scrollLeft += STEP;
+            if (e.clientY < ir.top    + EDGE) inner.scrollTop  -= STEP;
+            if (e.clientY > ir.bottom - EDGE) inner.scrollTop  += STEP;
+            return;
+        }
+
+        if (mode === 'resize') {
+            const dw = (e.clientX - startX) / z;
+            const dh = (e.clientY - startY) / z;
+            const newW = Math.max(280, baseW + dw);
+            const newH = Math.max(140, baseH + dh);
+            activeWin.style.width  = newW + 'px';
+            activeWin.style.height = newH + 'px';
+            activeWin.style.maxHeight = 'none';     // override the CSS cap during user resize
+            return;
+        }
+    });
+
+    const stopGesture = (e) => {
+        if (mode === 'idle') return;
+        if (activeWin) activeWin.classList.remove('dragging', 'resizing');
+        try { activeGrip && activeGrip.releasePointerCapture(e.pointerId); } catch (_) {}
+        mode = 'idle';
+        activeWin = null; activeGrip = null; activePointerId = null;
+        dragBoundsRect = null; dragWinRect = null;
+    };
+    inner.addEventListener('pointerup',          stopGesture);
+    inner.addEventListener('pointercancel',      stopGesture);
+    inner.addEventListener('lostpointercapture', stopGesture);
+
+    // Minimize button click (delegated)
+    inner.addEventListener('click', (e) => {
+        const minBtn = e.target.closest('.crt-min-btn');
+        if (!minBtn) return;
+        e.stopPropagation();
+        const win = minBtn.closest('.crt-window');
+        if (win) win.classList.toggle('minimized');
+    });
+
+    // ── Zoom controls ──
+    // The zoom factor is stored as the CSS custom property --zoom on
+    // .modal-inner. Buttons / keyboard / Ctrl+wheel mutate it.
+    const ZOOM_MIN = 0.4;
+    const ZOOM_MAX = 2.5;
+    const ZOOM_STEP_FACTOR = 1.2;
+    const resetLabel = document.getElementById('crt-zoom-reset');
+
+    const getCurrentZoom = () => {
+        const v = parseFloat(getComputedStyle(inner).getPropertyValue('--zoom'));
+        return v && v > 0 ? v : 1;
+    };
+    const setZoom = (next, anchor) => {
+        next = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, next));
+        const prev = getCurrentZoom();
+        if (next === prev) return;
+        // Anchor zoom on the cursor (or viewport center if not provided) so the
+        // point under the pointer stays roughly fixed across the zoom step.
+        const ir = inner.getBoundingClientRect();
+        const ax = anchor ? (anchor.x - ir.left) : (ir.width  / 2);
+        const ay = anchor ? (anchor.y - ir.top ) : (ir.height / 2);
+        const cx = inner.scrollLeft + ax;
+        const cy = inner.scrollTop  + ay;
+        inner.style.setProperty('--zoom', String(next));
+        if (resetLabel) resetLabel.textContent = Math.round(next * 100) + '%';
+        // After re-layout, recompute scroll so the anchor stays under the pointer.
+        requestAnimationFrame(() => {
+            inner.scrollLeft = cx * (next / prev) - ax;
+            inner.scrollTop  = cy * (next / prev) - ay;
+        });
+    };
+
+    const btnIn  = document.getElementById('crt-zoom-in');
+    const btnOut = document.getElementById('crt-zoom-out');
+    const btnRst = document.getElementById('crt-zoom-reset');
+    if (btnIn)  btnIn .addEventListener('click', () => setZoom(getCurrentZoom() * ZOOM_STEP_FACTOR));
+    if (btnOut) btnOut.addEventListener('click', () => setZoom(getCurrentZoom() / ZOOM_STEP_FACTOR));
+    if (btnRst) btnRst.addEventListener('click', () => setZoom(1));
+
+    // Keyboard: Ctrl/Cmd + (=|+) zoom in, Ctrl/Cmd + (-|_) zoom out, Ctrl/Cmd + 0 reset.
+    document.addEventListener('keydown', (e) => {
+        if (!modal.classList.contains('crt')) return;
+        if (!(e.ctrlKey || e.metaKey)) return;
+        if (e.key === '+' || e.key === '=') { e.preventDefault(); setZoom(getCurrentZoom() * ZOOM_STEP_FACTOR); }
+        else if (e.key === '-' || e.key === '_') { e.preventDefault(); setZoom(getCurrentZoom() / ZOOM_STEP_FACTOR); }
+        else if (e.key === '0') { e.preventDefault(); setZoom(1); }
+    });
+
+    // Ctrl/Cmd + scroll wheel = zoom in / out, anchored on the cursor.
+    inner.addEventListener('wheel', (e) => {
+        if (!(e.ctrlKey || e.metaKey)) return;
+        e.preventDefault();
+        const factor = e.deltaY < 0 ? 1.1 : (1 / 1.1);
+        setZoom(getCurrentZoom() * factor, { x: e.clientX, y: e.clientY });
+    }, { passive: false });
+})();
 
 // ══════════════════════════════════════════════════════════════════════════
 // 3D PROJECT SPHERE — with 3D OBJECTS (cafe, computer, car) as markers
