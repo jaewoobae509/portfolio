@@ -563,6 +563,490 @@
         .modal-close-btn { margin-top: 1.5rem; font-family: 'Fira Code', monospace; font-size: 0.75rem; color: var(--lime); background: transparent; border: 1px solid var(--border); padding: 6px 18px; cursor: pointer; letter-spacing: 2px; transition: background 0.2s, border-color 0.2s; }
         .modal-close-btn:hover { background: rgba(210,255,0,0.08); border-color: var(--lime); }
 
+        /* ─── FULL-SCREEN SCROLL SLIDES (project modals only) ────────────────
+           Vanilla port of the GSAP "FullScreenScrollFX" pattern. Each slide is
+           one screen tall; the inner panel is sticky-pinned so the title /
+           labels / background swap as the user scrolls. Replaces the long
+           pd-section text with 4–5 concise screens. */
+        #zoom-modal:not(.crt) .fx-stage {
+            /* 67vh per slide (≈2/3 of the original 100vh) — same pinned panel,
+               same activator logic, just less scroll-distance per section. */
+            height: calc(var(--fx-count, 4) * 67vh);
+            position: relative;
+            margin: -1.5rem -2.5rem -2.5rem;
+        }
+        #zoom-modal:not(.crt) .fx-fixed {
+            position: sticky; top: 0;
+            height: 100vh;
+            overflow: hidden;
+            color: var(--text);
+            font-family: 'Fira Code', monospace;
+        }
+        #zoom-modal:not(.crt) .fx-bgs { position: absolute; inset: 0; background: var(--dark); z-index: 0; }
+        #zoom-modal:not(.crt) .fx-bg {
+            position: absolute; inset: 0;
+            opacity: 0;
+            transition: opacity 0.6s ease, transform 0.6s ease;
+            transform: scale(1.04);
+        }
+        #zoom-modal:not(.crt) .fx-bg.active { opacity: 1; transform: scale(1); }
+        #zoom-modal:not(.crt) .fx-bg::after {
+            content: ""; position: absolute; inset: 0;
+            background: linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(10,15,24,0.85) 100%);
+        }
+        #zoom-modal:not(.crt) .fx-bg::before {
+            content: ""; position: absolute; inset: 0;
+            background-image:
+                linear-gradient(rgba(210,255,0,0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(210,255,0,0.04) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+        }
+        #zoom-modal:not(.crt) .fx-grid {
+            position: relative; z-index: 2;
+            height: 100%;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            padding: 1.6rem 2.5rem;
+            gap: 1.2rem;
+        }
+        #zoom-modal:not(.crt) .fx-header {
+            text-align: center;
+            font-size: clamp(0.9rem, 1.4vw, 1.15rem);
+            letter-spacing: 3px;
+            color: var(--lime);
+            text-shadow: var(--glow-sm);
+            opacity: 0.85;
+        }
+        #zoom-modal:not(.crt) .fx-content {
+            display: grid;
+            grid-template-columns: 1fr 1.6fr 1fr;
+            align-items: center;
+            gap: 1.6rem;
+            min-height: 0;
+        }
+        #zoom-modal:not(.crt) .fx-list { display: flex; flex-direction: column; gap: 0.65rem; }
+        #zoom-modal:not(.crt) .fx-list.left  { align-items: flex-start; }
+        #zoom-modal:not(.crt) .fx-list.right { align-items: flex-end; text-align: right; }
+        #zoom-modal:not(.crt) .fx-item {
+            opacity: 0.32;
+            color: #e8f0cc;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            font-size: clamp(0.78rem, 1.1vw, 1.05rem);
+            text-transform: uppercase;
+            cursor: pointer;
+            position: relative;
+            padding: 4px 0;
+            transition: opacity 0.3s ease, transform 0.3s ease, color 0.3s ease;
+            user-select: none;
+        }
+        #zoom-modal:not(.crt) .fx-item.active { opacity: 1; color: var(--lime); text-shadow: var(--glow-sm); }
+        #zoom-modal:not(.crt) .fx-list.left  .fx-item.active { transform: translateX(14px); padding-left: 16px; }
+        #zoom-modal:not(.crt) .fx-list.right .fx-item.active { transform: translateX(-14px); padding-right: 16px; }
+        #zoom-modal:not(.crt) .fx-list.left  .fx-item.active::before,
+        #zoom-modal:not(.crt) .fx-list.right .fx-item.active::after {
+            content: "";
+            position: absolute; top: 50%; transform: translateY(-50%);
+            width: 7px; height: 7px; background: var(--lime); border-radius: 50%;
+            box-shadow: 0 0 12px var(--lime);
+        }
+        #zoom-modal:not(.crt) .fx-list.left  .fx-item.active::before { left: 0; }
+        #zoom-modal:not(.crt) .fx-list.right .fx-item.active::after  { right: 0; }
+
+        #zoom-modal:not(.crt) .fx-center { position: relative; min-height: 220px; }
+        #zoom-modal:not(.crt) .fx-featured {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(36px);
+            transition: opacity 0.55s ease, transform 0.55s ease;
+            pointer-events: none;
+        }
+        #zoom-modal:not(.crt) .fx-featured.active {
+            opacity: 1; transform: translateY(0); pointer-events: auto;
+        }
+        #zoom-modal:not(.crt) .fx-title {
+            margin: 0;
+            font-weight: 900;
+            font-size: clamp(2rem, 5.5vw, 4.2rem);
+            letter-spacing: -0.02em;
+            line-height: 1;
+            color: #fff;
+            text-shadow: 0 0 30px rgba(210, 255, 0, 0.35), 0 0 60px rgba(0, 240, 255, 0.18);
+            text-transform: uppercase;
+        }
+        #zoom-modal:not(.crt) .fx-title strong { color: var(--lime); }
+        #zoom-modal:not(.crt) .fx-kicker {
+            margin: 0.9rem 0 0;
+            font-size: 0.78rem;
+            letter-spacing: 3px;
+            color: var(--cyan);
+            opacity: 0.95;
+            text-transform: uppercase;
+        }
+        #zoom-modal:not(.crt) .fx-body {
+            margin: 0.9rem auto 0;
+            max-width: 560px;
+            color: #e8f0cc;
+            font-size: clamp(0.9rem, 1.05vw, 1.05rem);
+            line-height: 1.65;
+            opacity: 0.92;
+        }
+
+        #zoom-modal:not(.crt) .fx-footer {
+            display: flex; align-items: center; justify-content: center; gap: 1rem;
+        }
+        #zoom-modal:not(.crt) .fx-progress {
+            display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+            min-width: 260px;
+        }
+        #zoom-modal:not(.crt) .fx-progress-nums {
+            display: flex; justify-content: space-between; width: 100%;
+            color: var(--lime);
+            font-size: 0.7rem;
+            letter-spacing: 3px;
+            opacity: 0.85;
+        }
+        #zoom-modal:not(.crt) .fx-progress-bar {
+            position: relative; width: 100%; height: 2px;
+            background: rgba(232, 240, 204, 0.18);
+        }
+        #zoom-modal:not(.crt) .fx-progress-fill {
+            position: absolute; left: 0; top: 0; bottom: 0;
+            width: 0%; background: var(--lime);
+            box-shadow: 0 0 14px rgba(210, 255, 0, 0.55);
+            transition: width 0.45s ease;
+        }
+        /* Floating close button — pinned to BOTTOM-RIGHT of the page so it
+           never sits over the title. Always reachable while slides are pinned. */
+        #zoom-modal:not(.crt) .fx-close {
+            position: fixed;
+            bottom: 22px; right: 22px; top: auto; z-index: 30;
+            background: rgba(0,0,0,0.72);
+            border: 1px solid var(--lime);
+            color: var(--lime);
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            padding: 10px 18px;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.45), 0 0 18px rgba(210,255,0,0.18);
+            transition: background 0.2s, color 0.2s, transform 0.2s, box-shadow 0.2s;
+        }
+        #zoom-modal:not(.crt) .fx-close:hover {
+            background: var(--lime); color: var(--dark);
+            border-color: var(--lime);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5), var(--glow-sm);
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 720px) {
+            #zoom-modal:not(.crt) .fx-content {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+                text-align: center;
+            }
+            #zoom-modal:not(.crt) .fx-list.left,
+            #zoom-modal:not(.crt) .fx-list.right { align-items: center; text-align: center; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 0.5rem 1rem; }
+            #zoom-modal:not(.crt) .fx-list .fx-item.active { transform: none; padding: 4px 12px; }
+            #zoom-modal:not(.crt) .fx-list .fx-item.active::before,
+            #zoom-modal:not(.crt) .fx-list .fx-item.active::after { display: none; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            #zoom-modal:not(.crt) .fx-bg,
+            #zoom-modal:not(.crt) .fx-featured,
+            #zoom-modal:not(.crt) .fx-item { transition: none; }
+        }
+
+        /* ─── v24 — Dynamic per-slide theme + video backgrounds ──────────────
+           Each slide can declare an accent (lime / cyan / hot / dual) which
+           drives the title glow, progress, dot, and bg tint. Slides with
+           data-video attach the actual MP4 as a cover background. */
+        :root {
+            --acc-cyan: #00F0FF;
+            --acc-hot:  #FF3E6C;
+        }
+        /* Default slide accent — slides without data-accent inherit lime */
+        #zoom-modal:not(.crt) .fx-bg            { --slide-accent: var(--lime); }
+        #zoom-modal:not(.crt) .fx-bg[data-accent="cyan"] { --slide-accent: var(--acc-cyan); }
+        #zoom-modal:not(.crt) .fx-bg[data-accent="hot"]  { --slide-accent: var(--acc-hot);  }
+        #zoom-modal:not(.crt) .fx-bg[data-accent="dual"] { --slide-accent: var(--acc-cyan); }
+
+        /* Replace the generic dark overlay with an accent-tinted gradient */
+        #zoom-modal:not(.crt) .fx-bg::after {
+            background:
+                radial-gradient(80% 60% at 50% 40%,
+                    color-mix(in srgb, var(--slide-accent) 14%, transparent) 0%,
+                    rgba(0,0,0,0) 60%),
+                linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(10,15,24,0.85) 100%);
+        }
+
+        /* Color-aware title / kicker / progress per slide */
+        #zoom-modal:not(.crt) .fx-bg.active ~ .fx-grid .fx-featured.active .fx-title,
+        #zoom-modal:not(.crt) .fx-fixed[data-active-accent] .fx-title {
+            /* fall back to lime via the underlying CSS */
+        }
+        #zoom-modal:not(.crt) .fx-fixed[data-active-accent="cyan"] .fx-title { text-shadow: 0 0 30px rgba(0,240,255,0.45), 0 0 60px rgba(0,240,255,0.22); }
+        #zoom-modal:not(.crt) .fx-fixed[data-active-accent="hot"]  .fx-title { text-shadow: 0 0 30px rgba(255,62,108,0.45), 0 0 60px rgba(255,62,108,0.22); }
+        #zoom-modal:not(.crt) .fx-fixed[data-active-accent="dual"] .fx-title { text-shadow: 0 0 30px rgba(210,255,0,0.4), 0 0 60px rgba(0,240,255,0.3); }
+        #zoom-modal:not(.crt) .fx-fixed[data-active-accent="cyan"] .fx-kicker { color: var(--acc-cyan); }
+        #zoom-modal:not(.crt) .fx-fixed[data-active-accent="hot"]  .fx-kicker { color: var(--acc-hot);  }
+
+        /* Progress fill recolors to match active accent */
+        #zoom-modal:not(.crt) .fx-fixed[data-active-accent="cyan"] .fx-progress-fill { background: var(--acc-cyan); box-shadow: 0 0 14px rgba(0,240,255,0.6); }
+        #zoom-modal:not(.crt) .fx-fixed[data-active-accent="hot"]  .fx-progress-fill { background: var(--acc-hot);  box-shadow: 0 0 14px rgba(255,62,108,0.6); }
+        #zoom-modal:not(.crt) .fx-fixed[data-active-accent="cyan"] .fx-progress-nums,
+        #zoom-modal:not(.crt) .fx-fixed[data-active-accent="cyan"] .fx-header { color: var(--acc-cyan); }
+        #zoom-modal:not(.crt) .fx-fixed[data-active-accent="hot"]  .fx-progress-nums,
+        #zoom-modal:not(.crt) .fx-fixed[data-active-accent="hot"]  .fx-header { color: var(--acc-hot);  }
+
+        /* Active dot picks up the accent */
+        #zoom-modal:not(.crt) .fx-fixed[data-active-accent="cyan"] .fx-list .fx-item.active { color: var(--acc-cyan); }
+        #zoom-modal:not(.crt) .fx-fixed[data-active-accent="hot"]  .fx-list .fx-item.active { color: var(--acc-hot);  }
+        #zoom-modal:not(.crt) .fx-fixed[data-active-accent="cyan"] .fx-list .fx-item.active::before,
+        #zoom-modal:not(.crt) .fx-fixed[data-active-accent="cyan"] .fx-list .fx-item.active::after  { background: var(--acc-cyan); box-shadow: 0 0 12px var(--acc-cyan); }
+        #zoom-modal:not(.crt) .fx-fixed[data-active-accent="hot"]  .fx-list .fx-item.active::before,
+        #zoom-modal:not(.crt) .fx-fixed[data-active-accent="hot"]  .fx-list .fx-item.active::after  { background: var(--acc-hot);  box-shadow: 0 0 12px var(--acc-hot);  }
+
+        /* Video background — slides with a data-video attribute */
+        #zoom-modal:not(.crt) .fx-bg-video {
+            position: absolute; inset: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            object-position: center;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+            z-index: 0;
+        }
+        #zoom-modal:not(.crt) .fx-bg.active .fx-bg-video { opacity: 0.55; }
+        /* Stronger overlay over the video so text stays readable */
+        #zoom-modal:not(.crt) .fx-bg.has-video::after {
+            background:
+                radial-gradient(60% 50% at 50% 45%,
+                    color-mix(in srgb, var(--slide-accent) 18%, transparent) 0%,
+                    rgba(0,0,0,0) 65%),
+                linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.78) 100%);
+        }
+
+        /* Decorative corner brackets — give each slide a HUD-y border */
+        #zoom-modal:not(.crt) .fx-grid::before,
+        #zoom-modal:not(.crt) .fx-grid::after {
+            content: "";
+            position: absolute;
+            width: 60px; height: 60px;
+            border: 2px solid color-mix(in srgb, var(--slide-accent, var(--lime)) 60%, transparent);
+            pointer-events: none;
+            opacity: 0.6;
+            transition: border-color 0.6s ease;
+        }
+        #zoom-modal:not(.crt) .fx-grid::before {
+            top: 14px; left: 14px;
+            border-right: none; border-bottom: none;
+        }
+        #zoom-modal:not(.crt) .fx-grid::after {
+            bottom: 14px; right: 14px;
+            border-left: none; border-top: none;
+        }
+        #zoom-modal:not(.crt) .fx-fixed[data-active-accent="cyan"] .fx-grid::before,
+        #zoom-modal:not(.crt) .fx-fixed[data-active-accent="cyan"] .fx-grid::after { border-color: rgba(0,240,255,0.55); }
+        #zoom-modal:not(.crt) .fx-fixed[data-active-accent="hot"]  .fx-grid::before,
+        #zoom-modal:not(.crt) .fx-fixed[data-active-accent="hot"]  .fx-grid::after { border-color: rgba(255,62,108,0.55); }
+
+        /* Animated scan-beam sweeping across each slide */
+        #zoom-modal:not(.crt) .fx-fixed::before {
+            content: "";
+            position: absolute;
+            left: -20%; top: 0;
+            width: 30%; height: 100%;
+            background: linear-gradient(90deg,
+                transparent 0%,
+                rgba(255,255,255,0.04) 50%,
+                transparent 100%);
+            animation: fx-scan 7s linear infinite;
+            pointer-events: none;
+            z-index: 1;
+            mix-blend-mode: overlay;
+        }
+        @keyframes fx-scan {
+            0%   { transform: translateX(-50%); }
+            100% { transform: translateX(450%); }
+        }
+
+        /* Subtle horizontal scanline overlay on all slides */
+        #zoom-modal:not(.crt) .fx-fixed::after {
+            content: "";
+            position: absolute; inset: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent, transparent 3px,
+                rgba(255,255,255,0.018) 3px, rgba(255,255,255,0.018) 4px
+            );
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Title gets a subtle entrance bounce on activation */
+        #zoom-modal:not(.crt) .fx-featured.active .fx-title {
+            animation: fx-title-in 0.7s cubic-bezier(.2,.9,.25,1.1) both;
+        }
+        @keyframes fx-title-in {
+            0%   { transform: translateY(20px) scale(0.96); opacity: 0; letter-spacing: 0.2em; }
+            60%  { letter-spacing: -0.04em; }
+            100% { transform: translateY(0) scale(1); opacity: 1; letter-spacing: -0.02em; }
+        }
+        #zoom-modal:not(.crt) .fx-featured.active .fx-kicker { animation: fx-fade-up 0.7s 0.15s cubic-bezier(.2,.9,.25,1.1) both; }
+        #zoom-modal:not(.crt) .fx-featured.active .fx-body   { animation: fx-fade-up 0.7s 0.25s cubic-bezier(.2,.9,.25,1.1) both; }
+        @keyframes fx-fade-up {
+            0%   { transform: translateY(14px); opacity: 0; }
+            100% { transform: translateY(0);    opacity: 0.92; }
+        }
+
+        /* "▶ DEMO" button / link — sits centred above the slide title.
+           Works as either a <button> (opens local lightbox) or an <a href> with
+           target="_blank" (opens an external host like Google Drive). */
+        #zoom-modal:not(.crt) .fx-demo-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 0.8rem;
+            padding: 8px 16px 8px 14px;
+            border: 1px solid var(--slide-accent, var(--lime));
+            background: rgba(0,0,0,0.45);
+            color: var(--slide-accent, var(--lime));
+            font-family: 'Fira Code', monospace;
+            font-size: 0.7rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            text-decoration: none;            /* kill <a> default underline */
+            cursor: pointer;
+            backdrop-filter: blur(6px);
+            transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+            animation: fx-pulse 2.4s ease-in-out infinite;
+            position: relative;
+            z-index: 4;
+        }
+        #zoom-modal:not(.crt) .fx-demo-tag:hover {
+            background: var(--slide-accent, var(--lime));
+            color: #0a0a0a;
+            transform: translateY(-2px) scale(1.03);
+            box-shadow: 0 0 24px color-mix(in srgb, var(--slide-accent, var(--lime)) 55%, transparent);
+            animation: none;
+        }
+        #zoom-modal:not(.crt) .fx-demo-tag:active { transform: translateY(0) scale(0.98); }
+        @keyframes fx-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--slide-accent, var(--lime)) 40%, transparent); }
+            50%      { box-shadow: 0 0 14px 2px color-mix(in srgb, var(--slide-accent, var(--lime)) 30%, transparent); }
+        }
+
+        /* ─── DEMO LIGHTBOX ──────────────────────────────────────────────────
+           Pops up over the project modal when the user clicks ▶ Demo. */
+        .fx-lightbox {
+            position: fixed; inset: 0;
+            z-index: 9000;
+            background: rgba(0, 0, 0, 0.94);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center; justify-content: center;
+            padding: 5vh 5vw;
+            opacity: 0;
+            transition: opacity 0.22s ease;
+        }
+        .fx-lightbox.visible { display: flex; opacity: 1; }
+        .fx-lightbox-frame {
+            position: relative;
+            max-width: 100%;
+            max-height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            animation: fx-lb-in 0.32s cubic-bezier(.2,.9,.25,1.1) both;
+        }
+        @keyframes fx-lb-in {
+            from { transform: scale(0.94); opacity: 0; }
+            to   { transform: scale(1);    opacity: 1; }
+        }
+        .fx-lightbox-video {
+            max-width: 100%;
+            max-height: 84vh;
+            border: 2px solid var(--lime);
+            box-shadow:
+                0 0 60px rgba(210, 255, 0, 0.28),
+                0 0 120px rgba(0, 240, 255, 0.18),
+                0 30px 60px rgba(0, 0, 0, 0.7);
+            background: #000;
+            display: block;
+        }
+        .fx-lightbox-caption {
+            position: absolute;
+            left: 0; right: 0;
+            bottom: -38px;
+            text-align: center;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+            letter-spacing: 3px;
+            color: var(--lime);
+            text-shadow: var(--glow-sm);
+            text-transform: uppercase;
+        }
+        .fx-lightbox-close {
+            position: fixed;
+            top: 22px; right: 26px;
+            z-index: 9001;
+            background: rgba(0, 0, 0, 0.65);
+            border: 1px solid var(--lime);
+            color: var(--lime);
+            font-family: 'Fira Code', monospace;
+            font-size: 0.95rem;
+            font-weight: 800;
+            line-height: 1;
+            padding: 8px 14px;
+            cursor: pointer;
+            letter-spacing: 2px;
+            backdrop-filter: blur(6px);
+            transition: background 0.2s, color 0.2s, transform 0.2s;
+        }
+        .fx-lightbox-close:hover {
+            background: var(--lime);
+            color: #0a0a0a;
+            transform: scale(1.05);
+            box-shadow: var(--glow);
+        }
+
+        /* Loading state — visible until the lightbox video reports canplay */
+        .fx-lightbox-loading {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 12px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            letter-spacing: 4px;
+            color: var(--lime);
+            text-shadow: var(--glow-sm);
+            text-transform: uppercase;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.18s ease;
+            z-index: 2;
+        }
+        .fx-lightbox.loading .fx-lightbox-loading { opacity: 1; }
+        .fx-lightbox.loading .fx-lightbox-video   { opacity: 0.25; }
+        .fx-lightbox-spinner {
+            width: 38px; height: 38px;
+            border: 2px solid rgba(210, 255, 0, 0.18);
+            border-top-color: var(--lime);
+            border-radius: 50%;
+            animation: fx-spin 0.9s linear infinite;
+        }
+        @keyframes fx-spin { to { transform: rotate(360deg); } }
+
         /* ─── CRT THEME ──────────────────────────────────────────────────────
            Retro-PC modal skin used by experience modals (ncsu / nagoya / gca).
            Whole viewport becomes a single oversized retro PC: the modal
@@ -1317,10 +1801,9 @@
                 <div class="chat-quick">
                     <button class="quick-q" data-q="Who is Jaewoo?">Who is he?</button>
                     <button class="quick-q" data-q="What are his skills?">Skills</button>
-                    <button class="quick-q" data-q="Tell me about his projects">Projects</button>
+                    <button class="quick-q" data-q="What projects has Jaewoo built? Give a quick rundown.">Projects</button>
                     <button class="quick-q" data-q="What is his work experience?">Experience</button>
                     <button class="quick-q" data-q="How can I contact him?">Contact</button>
-                    <button class="quick-q" data-q="What AI work has he done?">AI work</button>
                 </div>
 
                 <div class="chat-input-row">
@@ -1507,6 +1990,19 @@
 </section>
 
 <!-- MODAL -->
+<!-- Demo-video lightbox (project modals) -->
+<div class="fx-lightbox" id="fx-lightbox" aria-hidden="true">
+    <button class="fx-lightbox-close" id="fx-lightbox-close" type="button" aria-label="Close demo">✕ CLOSE</button>
+    <div class="fx-lightbox-frame">
+        <video class="fx-lightbox-video" id="fx-lightbox-video" controls playsinline></video>
+        <div class="fx-lightbox-loading" id="fx-lightbox-loading" aria-hidden="true">
+            <div class="fx-lightbox-spinner"></div>
+            <div>▶ LOADING DEMO</div>
+        </div>
+        <div class="fx-lightbox-caption" id="fx-lightbox-caption"></div>
+    </div>
+</div>
+
 <div id="zoom-modal">
     <!-- Subtle bezel scanline overlay, only visible when the modal has the .crt class -->
     <div class="crt-bezel-fx" aria-hidden="true"></div>
@@ -1816,35 +2312,68 @@ setInterval(() => { document.getElementById('clock').innerText = new Date().toLo
             `💼 linkedin.com/in/jaewoo-bae-b57424265`,
     };
 
-    function getResponse(raw) {
+    // Static fallback used only when the AI endpoint is unreachable.
+    // Project / skill / contact intents are checked BEFORE the catch-all
+    // "tell me about" pattern so "Tell me about his projects" no longer
+    // matches the introduction.
+    function getStaticResponse(raw) {
         const q = raw.toLowerCase().trim();
         if (/^(hi|hello|hey|sup|yo|greetings|howdy|hiya)/.test(q))
             return `Hey! I'm JAE-BOT, Jaewoo's AI assistant.\nAsk me about his skills, projects, experience, or how to reach him.`;
         if (/what can you|help|commands|what do you know|topics/.test(q))
-            return `I know everything about Jaewoo! Try asking:\n• "Who is Jaewoo?"\n• "What are his skills?"\n• "Tell me about his projects"\n• "What is his work experience?"\n• "AI work"\n• "How to contact him?"`;
-        if (/who (is|are) (jaewoo|he)|about (jaewoo|him)|tell me about|background|introduce/.test(q)) return KB.about;
-        if (/school|educat|universit|nc state|ncsu|degree|major|stud|college/.test(q)) return KB.education;
-        if (/\bgpa\b|grade|score|academic performance/.test(q)) return KB.gpa;
-        if (/nagoya|japan(?:ese)?|deepsdf|deep.sdf/.test(q)) return KB.nagoya;
-        if (/global.career|gca/.test(q)) return KB.gca;
-        if (/nc.?state.*eng|software eng.*nc|ncsu.*work|current.*job/.test(q)) return KB.ncsu;
-        if (/experience|work|job|career|intern|employ|position|role/.test(q)) return KB.experience;
+            return `I know about Jaewoo's projects, experience, skills, education, and contact info — try any of those!`;
+        // Specific topics first
         if (/wolfcafe|cafe|coffee|restaurant|menu/.test(q)) return KB.wolfcafe;
         if (/self.?driv|autonomous|lidar|can.bus/.test(q)) return KB.car;
-        if (/hacknc|hackathon|health platform/.test(q)) return KB.hacknc;
+        if (/hacknc|hackathon|health platform|your pt/.test(q)) return KB.hacknc;
         if (/fingerprint|biometric|rootsift|sift|clahe|auc|open.set|edward.feng|csc591/.test(q)) return KB.fingerprint;
-        if (/\bcar\b|\bros\b|robot(?:ics)?/.test(q)) return KB.car;
+        if (/nagoya|japan(?:ese)?|deepsdf|deep.sdf/.test(q)) return KB.nagoya;
+        if (/global.career|gca|grammys|intel sustainability/.test(q)) return KB.gca;
+        if (/nc.?state.*eng|software eng.*nc|ncsu.*work|current.*job|packsyllabus|syllabus/.test(q)) return KB.ncsu;
+        // Categories — these come BEFORE the generic about/intro pattern.
+        // NOTE: experience is checked BEFORE skills so "his work experience"
+        // doesn't accidentally get caught by the skills regex.
         if (/project|built|made|created|developed|portfolio/.test(q)) return KB.projects;
-        if (/skill|language|tech|stack|framework|tool|know|exper(?:t|ience)|proficien/.test(q)) return KB.skills;
-        if (/\bai\b|machine.learn|deep.learn|pytorch|neural|generat|model|research/.test(q)) return KB.ai;
-        if (/aws|docker|cloud|deploy|devops|container/.test(q))
-            return `Jaewoo uses AWS and Docker regularly:\n• Containerized the HackNC backend with Docker Compose\n• Cloud deployment & infrastructure management with AWS\n• Production-grade deployments for full-stack projects`;
+        if (/experience|work history|\bjob\b|career|intern|employ|position|role/.test(q)) return KB.experience;
+        if (/skill|language|tech|stack|framework|tool|know|expert(?:ise)?|proficien/.test(q)) return KB.skills;
         if (/hire|availab|opportunit|looking|open.to|recruit/.test(q)) return KB.hire;
         if (/contact|email|reach|linkedin|connect/.test(q)) return KB.contact;
+        if (/school|educat|universit|nc state|ncsu|degree|major|stud|college/.test(q)) return KB.education;
+        if (/\bgpa\b|grade|score|academic performance/.test(q)) return KB.gpa;
+        if (/\bai\b|machine.learn|deep.learn|pytorch|neural|generat|model|research/.test(q)) return KB.ai;
+        if (/aws|docker|cloud|deploy|devops|container/.test(q))
+            return `Jaewoo uses AWS and Docker regularly:\n• Containerized the HackNC backend with Docker Compose\n• Cloud deployment with AWS\n• Production deployments for full-stack projects`;
         if (/java(?:script)?\b|python|c\+\+|\bsql\b|react|next\.?js|spring/.test(q)) return KB.skills;
-        if (/thank|thanks|great|awesome|cool|nice|perfect|good/.test(q)) return `You're welcome! Feel free to ask anything else about Jaewoo. 👾`;
-        if (/bye|goodbye|see ya|cya|later/.test(q)) return `See you! Feel free to come back if you have more questions about Jaewoo. 👋`;
-        return `Hmm, I'm not sure about that one.\nTry asking about Jaewoo's experience, projects, skills, or how to contact him — I know all of it!`;
+        // Generic intros — checked last so they don't swallow more specific queries
+        if (/who (is|are) (jaewoo|he)|about (jaewoo|him)|background|introduce/.test(q)) return KB.about;
+        if (/tell me about/.test(q)) return KB.about;
+        if (/thank|thanks|great|awesome|cool|nice|perfect|good/.test(q)) return `You're welcome! Ask me anything else about Jaewoo. 👾`;
+        if (/bye|goodbye|see ya|cya|later/.test(q)) return `See you! Feel free to come back. 👋`;
+        return `Hmm, I'm not sure about that one.\nTry asking about Jaewoo's experience, projects, skills, or how to contact him.`;
+    }
+
+    // Real AI call through the Vercel serverless function at /api/chat.
+    // The function reads OPENAI_API_KEY (or ANTHROPIC_API_KEY) from the
+    // Vercel env vars and calls the model with a system prompt that has
+    // Jaewoo's portfolio info baked in.
+    async function getAIResponse(history) {
+        try {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 20000);
+            const res = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: history }),
+                signal: controller.signal
+            });
+            clearTimeout(timer);
+            if (!res.ok) return null;
+            const data = await res.json();
+            const reply = (data && (data.reply || data.message || data.text)) || '';
+            return reply.trim() || null;
+        } catch (e) {
+            return null;   // network failure / endpoint not deployed / timeout
+        }
     }
 
     function addMessage(text, role) {
@@ -1876,20 +2405,32 @@ setInterval(() => { document.getElementById('clock').innerText = new Date().toLo
         const t = document.getElementById('jb-typing');
         if (t) t.remove();
     }
-    function handleSend(override) {
+    // Multi-turn conversation history (sent to the AI endpoint each call,
+    // so the model can answer follow-up questions about earlier answers).
+    const __chatHistory = [];
+
+    async function handleSend(override) {
         const text = (override !== undefined ? override : inputEl.value).trim();
         if (!text) return;
         if (!override) inputEl.value = '';
         addMessage(text, 'user');
+        __chatHistory.push({ role: 'user', content: text });
+
         showTyping();
         inputEl.disabled = true; sendBtn.disabled = true;
-        const delay = 180 + Math.random() * 380;
-        setTimeout(() => {
-            removeTyping();
-            addMessage(getResponse(text), 'bot');
-            inputEl.disabled = false; sendBtn.disabled = false;
-            inputEl.focus();
-        }, delay);
+
+        // Try the real AI first; fall back to the static KB if the endpoint
+        // is unreachable (e.g. running from file://, or before deployment).
+        let reply = await getAIResponse(__chatHistory);
+        if (!reply) reply = getStaticResponse(text);
+
+        removeTyping();
+        addMessage(reply, 'bot');
+        __chatHistory.push({ role: 'assistant', content: reply });
+        // Trim history so the request payload doesn't grow unbounded.
+        if (__chatHistory.length > 16) __chatHistory.splice(0, __chatHistory.length - 16);
+        inputEl.disabled = false; sendBtn.disabled = false;
+        inputEl.focus();
     }
     sendBtn.addEventListener('click', () => handleSend());
     inputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSend(); });
@@ -2202,6 +2743,15 @@ const content = {
         t: "PROJECT // CAPSTONE SELF-DRIVING CAR",
         dur: "ROS 2 · Python · OpenCV · YOLOv8 · ZED Stereo Camera · CAN Bus · Xbox Controller",
         wide: true,
+        slides: [
+            { accent: 'dual', leftLabel: "Capstone",    rightLabel: "ROS 2",         title: "Self-Driving",                 kicker: "Lane detection · stop-sign vision · CAN bus", body: "Scale autonomous vehicle that follows painted lanes and brakes for stop signs — all over a CAN-controlled drive at 40 Hz." },
+            { accent: 'hot',  leftLabel: "The Problem", rightLabel: "35 sec laps",   title: "Too Slow",                     kicker: "Lap time stuck at 35 s",                       body: "High throttle lost the lane on curves. Stop-sign braking was unreliable. Single-lane gaps caused swerves." },
+            { accent: 'cyan', leftLabel: "The Fix",     rightLabel: "Look-ahead",    title: "Optimize",                     kicker: "Lane mask · ROI · look-ahead steering",        body: "Tightened HSV mask, narrowed ROI, aimed steering down-road. Distance-gated stop detection. Pose-aware braking." },
+            { accent: 'lime', leftLabel: "Result",      rightLabel: "9 sec laps",    title: "<strong>3.9×</strong> Faster", kicker: "Same course · 35 s → 9 s",                     body: "Holds full throttle through curves. Deterministic stop: detect → brake → park → resume. Clean manual/auto handoff." },
+            { accent: 'cyan', leftLabel: "Demo 01",     rightLabel: "Full Throttle", title: "Lane-Keeping",                 kicker: "▶ Demo · 01 of 03",                            body: "Full throttle with only lane detection — the car holds the line at top speed.",                  video: "self-driving-image/self_driving_1.mp4", demo: true, demoLink: "https://drive.google.com/file/d/1C-QflBTza1YBT7oJ8uyPjmwANqUsreHC/view?usp=drive_link" },
+            { accent: 'lime', leftLabel: "Demo 02",     rightLabel: "Stop Sign",     title: "Brake → Park → Resume",        kicker: "▶ Demo · 02 of 03",                            body: "Lane detection combined with stop-sign behavior. Brake to stop, park briefly, then resume autonomously.", video: "self-driving-image/self_driving_2.mp4", demo: true, demoLink: "https://drive.google.com/file/d/1eRgEpgbSJcglEmFmR8kGVVvyH3QWjMuz/view?usp=drive_link" },
+            { accent: 'cyan', leftLabel: "Demo 03",     rightLabel: "POV",           title: "On-Board View",                kicker: "▶ Demo · 03 of 03",                            body: "First-person view from the car's camera during an autonomous lap.",                              video: "self-driving-image/self_driving_3.mp4", demo: true, demoLink: "https://drive.google.com/file/d/1cSPva_N9KuD0fPdo2pb2kL8OGAJPmb5s/view?usp=drive_link" }
+        ],
         html: `
         <!-- Skills first -->
         <div class="pd-section">
@@ -2294,6 +2844,13 @@ const content = {
         t: "PROJECT // WOLFCAFE — FULL-STACK ORDERING PLATFORM",
         dur: "Spring Boot (Java) · React · MySQL / Hibernate · JWT · Agile Team of 6 · Aug – Dec 2025 · NCSU",
         wide: true,
+        slides: [
+            { leftLabel: "NCSU",    rightLabel: "Team of 6",         title: "WolfCafe",   kicker: "Full-stack café ordering platform",   body: "End-to-end ordering with Customer / Staff / Admin roles. Built over a semester with a 6-person Agile team in GitHub Projects." },
+            { leftLabel: "Roles",   rightLabel: "RBAC",              title: "Three Personas", kicker: "Customer · Staff · Admin",         body: "Customers browse → checkout. Staff fulfill orders and manage inventory. Admins control users, recipes, and tax." },
+            { leftLabel: "Backend", rightLabel: "Spring Boot",       title: "JWT + REST", kicker: "6 controllers · stateless auth",      body: "Auth, Item, Recipe, Ingredient, Order, Tax — every endpoint role-guarded. JWT filter chain + DTO/Mapper layering." },
+            { leftLabel: "Frontend", rightLabel: "React (Vite)",     title: "20+ Views",  kicker: "Real-time tax + tip math",            body: "20+ React components for login, ordering, inventory, and admin. Centralized Axios service layer keeps tokens in one place." },
+            { leftLabel: "Process", rightLabel: "Agile",             title: "Shipped",    kicker: "Sprint planning · PR reviews",        body: "GitHub Projects sprint board, parallel frontend/backend work against the DTO contract, recipes constrained by inventory." }
+        ],
         html: `
         <!-- Skills -->
         <div class="pd-section">
@@ -2445,6 +3002,13 @@ const content = {
         t: "PROJECT // HACKNC 2025 — YOUR PT (PERSONAL FITNESS PLATFORM)",
         dur: "Spring Boot (Java 21) · Next.js · PostgreSQL · Docker Compose · 24-hour Hackathon",
         wide: true,
+        slides: [
+            { leftLabel: "HackNC '25", rightLabel: "24 h",            title: "Your PT",     kicker: "Personal fitness platform · BMI · diet · workouts", body: "Full-stack health app shipped end-to-end in a 24-hour hackathon. No judgment — well, maybe just a little." },
+            { leftLabel: "Stack",     rightLabel: "Java + Next.js",   title: "End-to-End",  kicker: "Spring Boot · Next.js · PostgreSQL",                body: "Java 21 backend (8+ REST endpoints) + Next.js frontend with real-time BMI tracking + PostgreSQL persistence." },
+            { leftLabel: "Deploy",    rightLabel: "1 command",        title: "Docker",      kicker: "2-service compose stack",                           body: "Wrapped everything in Docker Compose. <code>docker compose up</code> = full app on any teammate's laptop. Zero env conflicts." },
+            { leftLabel: "Challenges", rightLabel: "Resolved",        title: "Friction",    kicker: "CORS · Networking · Persistence",                   body: "Inter-container DNS (db:5432 not localhost), Spring CORS whitelist for the Next.js origin, named Postgres volume so data survives rebuilds." },
+            { leftLabel: "Outcome",   rightLabel: "Shipped",          title: "On Time",     kicker: "Submitted by deadline",                             body: "Working end-to-end prototype: BMI tracking, diet/workout logging, persistent user data, clean Next.js UI." }
+        ],
         html: `
         <!-- Skills -->
         <div class="pd-section">
@@ -2580,6 +3144,13 @@ const content = {
         t: "PROJECT // FINGERPRINT AUTHENTICATION SYSTEM",
         dur: "Python · OpenCV · NumPy · Matplotlib · CSC591 @ NCSU",
         wide: true,
+        slides: [
+            { leftLabel: "CSC591",   rightLabel: "Open-Set",       title: "Fingerprint ID",  kicker: "1 : N biometric identification",        body: "Identify a probe fingerprint across N enrolled identities — or reject it as Unknown if no match is confident enough." },
+            { leftLabel: "Stage 1",  rightLabel: "Clean Ridges",   title: "Preprocess",      kicker: "Median blur · CLAHE · normalize",       body: "Median blur kills sensor noise without smoothing ridges. CLAHE lifts valley/ridge contrast. Cleaner input → more stable keypoints." },
+            { leftLabel: "Stage 2",  rightLabel: "RootSIFT",       title: "Features",        kicker: "Hellinger-kernel SIFT + histogram",     body: "RootSIFT (L1 → √ → L2) makes L2 distance behave like Hellinger — far better on ridge texture. Plus a 128-bin intensity histogram." },
+            { leftLabel: "Stage 3",  rightLabel: "28.5 / 1.6",     title: "Open Set",        kicker: "Threshold + runner-up margin",          body: "Top-2 templates per identity. Accept only if score ≥ 28.5 AND beats runner-up by ≥ 1.6. Else → Unknown." },
+            { leftLabel: "Result",   rightLabel: "Auto Eval",      title: "<strong>Robust</strong>", kicker: "Acc · Precision · Recall · F1",  body: "Impostors land in Unknown, not a wrong identity. Every run auto-emits a confusion + metrics dashboard PNG." }
+        ],
         html: `
         <!-- Skills -->
         <div class="pd-section">
@@ -2743,12 +3314,73 @@ function openTerm(id) {
     document.getElementById('m-title').innerText = d.t;
     // Remember which section this modal was opened from so closeTerm can return there.
     __preModalSectionId = CONTENT_SECTION[id] || 'projects';
-    // Rich detail body (d.html) takes precedence over the bullet list (d.bullets)
-    const body = d.html
-        ? `<div class="duration-line">⏱ ${d.dur}</div>${d.html}<br><button class="modal-close-btn" onclick="closeTerm()">[ CLOSE ]</button>`
-        : `<div class="duration-line">⏱ ${d.dur}</div>
+    // Project slides (d.slides) → full-screen scroll FX layout
+    // Otherwise rich html (d.html), otherwise plain bullets (d.bullets).
+    let body;
+    if (Array.isArray(d.slides) && d.slides.length) {
+        const slides = d.slides;
+        const headerTxt = (d.t || '').split('//').slice(-1)[0].trim() || (d.t || '');
+        body =
+            `<button class="fx-close" type="button" onclick="closeTerm()">[ CLOSE ]</button>` +
+            `<div class="fx-stage" style="--fx-count: ${slides.length}">` +
+                `<div class="fx-fixed" data-active-accent="${slides[0].accent || 'lime'}">` +
+                    `<div class="fx-bgs">` +
+                        slides.map((s, i) =>
+                            `<div class="fx-bg ${i === 0 ? 'active' : ''}${s.video ? ' has-video' : ''}" ` +
+                                `data-slide-bg="${i}" data-accent="${s.accent || 'lime'}">` +
+                                (s.video
+                                    ? `<video class="fx-bg-video" src="${s.video}" muted loop playsinline preload="auto"></video>`
+                                    : '') +
+                            `</div>`
+                        ).join('') +
+                    `</div>` +
+                    `<div class="fx-grid">` +
+                        `<div class="fx-header">${headerTxt}</div>` +
+                        `<div class="fx-content">` +
+                            `<div class="fx-list left">` +
+                                slides.map((s, i) =>
+                                    `<div class="fx-item ${i === 0 ? 'active' : ''}" data-slide-i="${i}">${s.leftLabel || ''}</div>`
+                                ).join('') +
+                            `</div>` +
+                            `<div class="fx-center">` +
+                                slides.map((s, i) =>
+                                    `<div class="fx-featured ${i === 0 ? 'active' : ''}" data-slide-feat="${i}">` +
+                                        (s.demo
+                                            ? (s.demoLink
+                                                ? `<a class="fx-demo-tag" href="${s.demoLink}" target="_blank" rel="noopener noreferrer" data-demo-i="${i}" aria-label="Open demo video in Google Drive">▶ Play Demo ↗</a>`
+                                                : `<button class="fx-demo-tag" type="button" data-demo-i="${i}" aria-label="Play demo video">▶ Play Demo</button>`)
+                                            : '') +
+                                        `<h3 class="fx-title">${s.title || ''}</h3>` +
+                                        (s.kicker ? `<p class="fx-kicker">${s.kicker}</p>` : '') +
+                                        (s.body   ? `<p class="fx-body">${s.body}</p>`     : '') +
+                                    `</div>`
+                                ).join('') +
+                            `</div>` +
+                            `<div class="fx-list right">` +
+                                slides.map((s, i) =>
+                                    `<div class="fx-item ${i === 0 ? 'active' : ''}" data-slide-i="${i}">${s.rightLabel || ''}</div>`
+                                ).join('') +
+                            `</div>` +
+                        `</div>` +
+                        `<div class="fx-footer">` +
+                            `<div class="fx-progress">` +
+                                `<div class="fx-progress-nums">` +
+                                    `<span class="fx-num-current">01</span>` +
+                                    `<span class="fx-num-total">${String(slides.length).padStart(2, '0')}</span>` +
+                                `</div>` +
+                                `<div class="fx-progress-bar"><div class="fx-progress-fill"></div></div>` +
+                            `</div>` +
+                        `</div>` +
+                    `</div>` +
+                `</div>` +
+            `</div>`;
+    } else if (d.html) {
+        body = `<div class="duration-line">⏱ ${d.dur}</div>${d.html}<br><button class="modal-close-btn" onclick="closeTerm()">[ CLOSE ]</button>`;
+    } else {
+        body = `<div class="duration-line">⏱ ${d.dur}</div>
            ${(d.bullets || []).map(b => `<div class="prompt-line"><span class="prompt-arrow">▶</span><span>${b}</span></div>`).join('')}
            <br><button class="modal-close-btn" onclick="closeTerm()">[ CLOSE ]</button>`;
+    }
     document.getElementById('m-body').innerHTML = body;
 
     // Toggle full-screen "wide" layout for case-study projects
@@ -2825,6 +3457,11 @@ function openTerm(id) {
     modal.scrollTop = 0;
     requestAnimationFrame(() => modal.classList.add('visible'));
 
+    // If this project rendered slides, wire the scroll-driven activator
+    if (Array.isArray(d.slides) && d.slides.length) {
+        requestAnimationFrame(initProjectSlides);
+    }
+
     // Measure & start the typewriter AFTER the modal is on-screen so that
     // scrollWidth reflects the real rendered text width.
     if (modal.classList.contains('crt')) {
@@ -2881,7 +3518,229 @@ function openTerm(id) {
         });
     }
 }
+// ── Full-screen scroll slides (project modals) ──
+// Tracks which sticky slide is active based on the user's scroll progress
+// through the .fx-stage. No GSAP — just a scroll listener + class swaps.
+let __fxCleanup = null;
+function initProjectSlides() {
+    if (__fxCleanup) { __fxCleanup(); __fxCleanup = null; }
+
+    const modal = document.getElementById('zoom-modal');
+    const stage = modal.querySelector('.fx-stage');
+    if (!stage) return;
+
+    const slidesCount = stage.querySelectorAll('[data-slide-feat]').length;
+    if (!slidesCount) return;
+
+    // In wide mode (project modals) the modal itself scrolls; in narrow mode
+    // the .modal-inner scrolls.
+    const scroller = modal.classList.contains('wide')
+        ? modal
+        : modal.querySelector('.modal-inner');
+    if (!scroller) return;
+
+    const fixed      = stage.querySelector('.fx-fixed');
+    const bgs        = stage.querySelectorAll('[data-slide-bg]');
+    const feats      = stage.querySelectorAll('[data-slide-feat]');
+    const items      = stage.querySelectorAll('[data-slide-i]');
+    const numCurrent = stage.querySelector('.fx-num-current');
+    const fillBar    = stage.querySelector('.fx-progress-fill');
+
+    let lastIdx = -1;
+    const setActive = (i) => {
+        if (i === lastIdx) return;
+        const prevIdx = lastIdx;
+        lastIdx = i;
+        bgs.forEach(el   => el.classList.toggle('active', +el.dataset.slideBg   === i));
+        feats.forEach(el => el.classList.toggle('active', +el.dataset.slideFeat === i));
+        items.forEach(el => el.classList.toggle('active', +el.dataset.slideI    === i));
+        if (numCurrent) numCurrent.textContent = String(i + 1).padStart(2, '0');
+        if (fillBar)    fillBar.style.width = `${(i / Math.max(1, slidesCount - 1)) * 100}%`;
+
+        // Swap the active accent on the pinned panel — recolors title glow,
+        // progress fill, header, active-list dot, and corner HUD brackets.
+        const activeBg = stage.querySelector(`[data-slide-bg="${i}"]`);
+        if (fixed && activeBg) {
+            fixed.setAttribute('data-active-accent', activeBg.dataset.accent || 'lime');
+        }
+
+        // Autoplay the active slide's video (all videos are already pre-loaded
+        // at render time so there's no buffering delay). Pause the previous.
+        if (activeBg) {
+            const v = activeBg.querySelector('video.fx-bg-video');
+            if (v) try { v.play().catch(() => {}); } catch (_) {}
+        }
+        if (prevIdx >= 0) {
+            const prevBg = stage.querySelector(`[data-slide-bg="${prevIdx}"]`);
+            const pv = prevBg && prevBg.querySelector('video.fx-bg-video');
+            if (pv && !pv.paused) pv.pause();
+        }
+    };
+
+    let raf = 0;
+    const update = () => {
+        raf = 0;
+        // Scroll progress through the stage (0 → 1)
+        const stageRect = stage.getBoundingClientRect();
+        const scrRect   = scroller.getBoundingClientRect
+            ? scroller.getBoundingClientRect()
+            : { top: 0, height: window.innerHeight };
+        const viewH    = scroller.clientHeight || window.innerHeight;
+        const totalH   = stage.offsetHeight - viewH;
+        // Stage offset relative to scroller top
+        const top      = stage.offsetTop;
+        const scrolled = scroller.scrollTop - top;
+        const p        = Math.max(0, Math.min(1, scrolled / Math.max(1, totalH)));
+        const idx      = Math.min(slidesCount - 1, Math.floor(p * slidesCount));
+        setActive(idx);
+    };
+
+    const onScroll = () => {
+        if (raf) return;
+        raf = requestAnimationFrame(update);
+    };
+    scroller.addEventListener('scroll', onScroll, { passive: true });
+    update();
+
+    // Click on a left/right label jumps to that slide. Demo links (anchors
+    // with an href like the Drive folder) are left to the browser — they
+    // open in a new tab thanks to target="_blank". Only old-style demo
+    // <button>s (no href) still trigger the local lightbox.
+    const onJump = (e) => {
+        const demoBtn = e.target.closest('.fx-demo-tag');
+        if (demoBtn) {
+            if (demoBtn.tagName === 'A' && demoBtn.getAttribute('href')) {
+                // Let the anchor's target="_blank" take over — nothing to do.
+                e.stopPropagation();
+                return;
+            }
+            e.preventDefault();
+            e.stopPropagation();
+            const i = +demoBtn.dataset.demoI;
+            const bg = stage.querySelector(`[data-slide-bg="${i}"]`);
+            const v  = bg && bg.querySelector('video.fx-bg-video');
+            const feat = stage.querySelector(`[data-slide-feat="${i}"]`);
+            const titleText = feat && feat.querySelector('.fx-title')
+                ? feat.querySelector('.fx-title').textContent.trim() : '';
+            if (v) {
+                try { v.pause(); } catch (_) {}
+                openFxLightbox(v.currentSrc || v.src, `▶ ${titleText}`);
+            }
+            return;
+        }
+
+        // ── List label → smooth-scroll to slide
+        const it = e.target.closest('[data-slide-i]');
+        if (!it) return;
+        const i = +it.dataset.slideI;
+        const viewH  = scroller.clientHeight || window.innerHeight;
+        const totalH = stage.offsetHeight - viewH;
+        const top    = stage.offsetTop;
+        const target = top + (i / Math.max(1, slidesCount - 1)) * totalH;
+        scroller.scrollTo({ top: target, behavior: 'smooth' });
+    };
+    stage.addEventListener('click', onJump);
+
+    __fxCleanup = () => {
+        scroller.removeEventListener('scroll', onScroll);
+        stage.removeEventListener('click', onJump);
+        if (raf) cancelAnimationFrame(raf);
+        // Free every slide-video so they don't keep buffering after close
+        stage.querySelectorAll('video.fx-bg-video').forEach(v => {
+            try { v.pause(); v.removeAttribute('src'); v.load(); } catch (_) {}
+        });
+    };
+}
+
+// ── Demo lightbox (project modal videos) ──
+// Wait for canplay before showing the video, so users see a clean "LOADING"
+// state instead of a stutter at start. Also pauses every slide bg video while
+// the lightbox is open (and saves their currentTime) so the decoder isn't
+// fighting itself — and resumes the active bg from where it left off on close.
+let __fxLbCanplayHandler = null;
+function openFxLightbox(src, caption) {
+    if (!src) return;
+    const lb      = document.getElementById('fx-lightbox');
+    const video   = document.getElementById('fx-lightbox-video');
+    const cap     = document.getElementById('fx-lightbox-caption');
+    if (!lb || !video) return;
+
+    // Pause every slide bg video and snapshot its position so we can resume
+    // the active one smoothly when the lightbox closes (prevents the post-
+    // close lag the user was seeing).
+    document.querySelectorAll('#zoom-modal video.fx-bg-video').forEach(v => {
+        try { v.dataset.bgPos = String(v.currentTime || 0); v.pause(); } catch (_) {}
+    });
+
+    // Show shell + loading overlay while we buffer
+    if (cap) cap.textContent = caption || '';
+    lb.style.display = 'flex';
+    lb.classList.add('loading');
+    requestAnimationFrame(() => lb.classList.add('visible'));
+
+    // Tear down any prior canplay listener
+    if (__fxLbCanplayHandler) {
+        try { video.removeEventListener('canplay', __fxLbCanplayHandler); } catch (_) {}
+        __fxLbCanplayHandler = null;
+    }
+    video.preload = 'auto';
+    video.src = src;
+    video.load();
+
+    __fxLbCanplayHandler = () => {
+        lb.classList.remove('loading');
+        try { video.play().catch(() => {}); } catch (_) {}
+        video.removeEventListener('canplay', __fxLbCanplayHandler);
+        __fxLbCanplayHandler = null;
+    };
+    video.addEventListener('canplay', __fxLbCanplayHandler);
+    // Safety net: if canplay never fires (offline, decode issue, etc.) reveal
+    // the player after 1.2s anyway.
+    setTimeout(() => {
+        if (lb.classList.contains('loading') && lb.classList.contains('visible')) {
+            lb.classList.remove('loading');
+            try { video.play().catch(() => {}); } catch (_) {}
+        }
+    }, 1200);
+}
+function closeFxLightbox() {
+    const lb     = document.getElementById('fx-lightbox');
+    const video  = document.getElementById('fx-lightbox-video');
+    if (!lb) return;
+    lb.classList.remove('visible', 'loading');
+    setTimeout(() => { lb.style.display = 'none'; }, 220);
+    if (video) {
+        if (__fxLbCanplayHandler) {
+            try { video.removeEventListener('canplay', __fxLbCanplayHandler); } catch (_) {}
+            __fxLbCanplayHandler = null;
+        }
+        try { video.pause(); video.removeAttribute('src'); video.load(); } catch (_) {}
+    }
+    // Resume the currently active slide's background video at where it was —
+    // wait one frame so the lightbox's decoder fully releases first.
+    requestAnimationFrame(() => {
+        const activeBg = document.querySelector('#zoom-modal .fx-bg.active video.fx-bg-video');
+        if (activeBg) {
+            try {
+                if (activeBg.dataset.bgPos) activeBg.currentTime = parseFloat(activeBg.dataset.bgPos) || 0;
+                activeBg.play().catch(() => {});
+            } catch (_) {}
+        }
+    });
+}
+(function () {
+    const lb = document.getElementById('fx-lightbox');
+    const closeBtn = document.getElementById('fx-lightbox-close');
+    if (closeBtn) closeBtn.addEventListener('click', (e) => { e.stopPropagation(); closeFxLightbox(); });
+    if (lb) lb.addEventListener('click', (e) => { if (e.target === lb) closeFxLightbox(); });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && lb && lb.classList.contains('visible')) closeFxLightbox();
+    });
+})();
+
 function closeTerm() {
+    closeFxLightbox();
+    if (__fxCleanup) { __fxCleanup(); __fxCleanup = null; }
     const modal = document.getElementById('zoom-modal');
     // Pause + detach video sources to free decoder/network resources
     modal.querySelectorAll('video').forEach(v => {
