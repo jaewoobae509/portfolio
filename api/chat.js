@@ -2,9 +2,9 @@
 // Deployed automatically by Vercel because it lives in /api.
 //
 // Env vars (configure in Vercel → Project → Settings → Environment Variables):
-//   OPENAI_API_KEY   — preferred. Uses gpt-4o-mini.
-//   ANTHROPIC_API_KEY — alternative. Uses claude-3-5-haiku.
-//   (set one of them)
+//   ANTHROPIC_API_KEY — preferred. Uses claude-haiku-4-5.
+//   OPENAI_API_KEY    — fallback. Uses gpt-4o-mini.
+//   (set one of them; if both exist, Anthropic wins)
 //
 // The frontend calls POST /api/chat with { messages: [{role, content}, ...] }
 // and receives { reply: "..." } back.
@@ -14,8 +14,8 @@ const SYSTEM_PROMPT = `You are JAE-BOT, the personal AI assistant on Jaewoo Bae'
 ══════════════════════════════════════════════════════════
 ABOUT JAEWOO BAE
 ══════════════════════════════════════════════════════════
-- Computer Science student at NC State University (NCSU), AI concentration
-- GPA: 3.6 / 4.0
+- B.S. Computer Science, AI concentration — NC State University (graduated). GPA 3.6 / 4.0.
+- Joining LG Energy Solution as a Process Engineer in June — bringing software-engineering rigor to the manufacturing floor.
 - Email: jaewoobae0701@gmail.com
 - LinkedIn: linkedin.com/in/jaewoo-bae-b57424265
 - Philosophy: human curiosity drives the solutions AI provides — building systems that bridge that gap.
@@ -133,7 +133,7 @@ async function callAnthropic(messages) {
             'anthropic-version': '2023-06-01'
         },
         body: JSON.stringify({
-            model: process.env.ANTHROPIC_MODEL || 'claude-3-5-haiku-20241022',
+            model: process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001',
             max_tokens: 400,
             temperature: 0.6,
             system: SYSTEM_PROMPT,
@@ -165,12 +165,13 @@ export default async function handler(req, res) {
 
     try {
         let reply = null;
-        if (process.env.OPENAI_API_KEY) {
-            reply = await callOpenAI(messages);
-        } else if (process.env.ANTHROPIC_API_KEY) {
+        // Anthropic is the preferred provider; OpenAI is the fallback.
+        if (process.env.ANTHROPIC_API_KEY) {
             reply = await callAnthropic(messages);
+        } else if (process.env.OPENAI_API_KEY) {
+            reply = await callOpenAI(messages);
         } else {
-            res.status(500).json({ error: 'No API key configured — set OPENAI_API_KEY or ANTHROPIC_API_KEY in Vercel env vars.' });
+            res.status(500).json({ error: 'No API key configured — set ANTHROPIC_API_KEY (or OPENAI_API_KEY) in Vercel env vars.' });
             return;
         }
         if (!reply || !reply.trim()) {
