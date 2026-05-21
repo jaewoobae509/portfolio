@@ -823,6 +823,31 @@
             z-index: 0;
         }
         #zoom-modal:not(.crt) .fx-bg.active .fx-bg-video { opacity: 0.55; }
+
+        /* Static image background — product screenshots behind a slide */
+        #zoom-modal:not(.crt) .fx-bg-image {
+            position: absolute; inset: 0;
+            background-size: cover;
+            background-position: center top;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+            z-index: 0;
+        }
+        #zoom-modal:not(.crt) .fx-bg.active .fx-bg-image { opacity: 0.4; }
+        /* Split variant — two screenshots side by side; left/width set inline */
+        #zoom-modal:not(.crt) .fx-bg-image.fx-bg-split {
+            inset: 0 auto 0 0;          /* left + width come from inline style */
+            background-position: center top;
+        }
+        /* Lighter overlay so the screenshot is clearly visible while the
+           title/body still keep enough contrast to read. */
+        #zoom-modal:not(.crt) .fx-bg.has-image::after {
+            background:
+                radial-gradient(70% 55% at 50% 42%,
+                    color-mix(in srgb, var(--slide-accent) 14%, transparent) 0%,
+                    rgba(0,0,0,0) 62%),
+                linear-gradient(180deg, rgba(8,11,16,0.42) 0%, rgba(8,11,16,0.62) 100%);
+        }
         /* Stronger overlay over the video so text stays readable */
         #zoom-modal:not(.crt) .fx-bg.has-video::after {
             background:
@@ -942,8 +967,36 @@
             50%      { box-shadow: 0 0 14px 2px color-mix(in srgb, var(--slide-accent, var(--lime)) 30%, transparent); }
         }
 
-        /* ─── DEMO LIGHTBOX ──────────────────────────────────────────────────
-           Pops up over the project modal when the user clicks ▶ Demo. */
+        /* Action buttons row (Show Code / View image) under a slide body */
+        #zoom-modal:not(.crt) .fx-actions {
+            display: flex; gap: 10px; flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 1.1rem;
+        }
+        #zoom-modal:not(.crt) .fx-action {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 16px;
+            border: 1px solid var(--slide-accent, var(--lime));
+            background: rgba(0,0,0,0.45);
+            color: var(--slide-accent, var(--lime));
+            font-family: 'Fira Code', monospace;
+            font-size: 0.68rem; letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            backdrop-filter: blur(6px);
+            transition: background 0.2s, transform 0.2s, box-shadow 0.2s, color 0.2s;
+        }
+        #zoom-modal:not(.crt) .fx-action:hover {
+            background: var(--slide-accent, var(--lime));
+            color: #0a0a0a;
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px color-mix(in srgb, var(--slide-accent, var(--lime)) 50%, transparent);
+        }
+        #zoom-modal:not(.crt) .fx-action:active { transform: translateY(0) scale(0.98); }
+
+        /* ─── LIGHTBOX ───────────────────────────────────────────────────────
+           Pops up over the project modal — shows a demo video, a still image,
+           or a code snippet depending on the mode-* class set in JS. */
         .fx-lightbox {
             position: fixed; inset: 0;
             z-index: 9000;
@@ -976,8 +1029,49 @@
                 0 0 120px rgba(0, 240, 255, 0.18),
                 0 30px 60px rgba(0, 0, 0, 0.7);
             background: #000;
-            display: block;
+            display: none;
         }
+        /* Still-image variant (result charts, diagrams) */
+        .fx-lightbox-img {
+            display: none;
+            max-width: 92vw;
+            max-height: 84vh;
+            border: 2px solid var(--lime);
+            box-shadow:
+                0 0 60px rgba(210, 255, 0, 0.25),
+                0 30px 60px rgba(0, 0, 0, 0.7);
+            background: #fff;
+        }
+        /* Code-snippet variant */
+        .fx-lightbox-code {
+            display: none;
+            margin: 0;
+            max-width: min(900px, 94vw);
+            max-height: 80vh;
+            overflow: auto;
+            padding: 1.6rem 1.9rem;
+            background: #0d1117;
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--lime);
+            box-shadow:
+                0 0 60px rgba(210, 255, 0, 0.18),
+                0 30px 60px rgba(0, 0, 0, 0.7);
+            text-align: left;
+        }
+        .fx-lightbox-code code {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.82rem;
+            line-height: 1.65;
+            color: #e8f0cc;
+            white-space: pre;
+            tab-size: 4;
+        }
+        /* Mode switches — only one media element shows at a time */
+        .fx-lightbox.mode-video .fx-lightbox-video { display: block; }
+        .fx-lightbox.mode-img   .fx-lightbox-img   { display: block; }
+        .fx-lightbox.mode-code  .fx-lightbox-code  { display: block; }
+        /* Loading overlay only applies to the video mode */
+        .fx-lightbox:not(.mode-video) .fx-lightbox-loading { display: none; }
         .fx-lightbox-caption {
             position: absolute;
             left: 0; right: 0;
@@ -1991,11 +2085,13 @@
 </section>
 
 <!-- MODAL -->
-<!-- Demo-video lightbox (project modals) -->
+<!-- Lightbox (project modals) — shows a demo video, a still image, or a code snippet -->
 <div class="fx-lightbox" id="fx-lightbox" aria-hidden="true">
-    <button class="fx-lightbox-close" id="fx-lightbox-close" type="button" aria-label="Close demo">✕ CLOSE</button>
+    <button class="fx-lightbox-close" id="fx-lightbox-close" type="button" aria-label="Close">✕ CLOSE</button>
     <div class="fx-lightbox-frame">
         <video class="fx-lightbox-video" id="fx-lightbox-video" controls playsinline></video>
+        <img class="fx-lightbox-img" id="fx-lightbox-img" alt="">
+        <pre class="fx-lightbox-code"><code id="fx-lightbox-code-text"></code></pre>
         <div class="fx-lightbox-loading" id="fx-lightbox-loading" aria-hidden="true">
             <div class="fx-lightbox-spinner"></div>
             <div>▶ LOADING DEMO</div>
@@ -2848,11 +2944,39 @@ const content = {
         dur: "Spring Boot (Java) · React · MySQL / Hibernate · JWT · Agile Team of 6 · Aug – Dec 2025 · NCSU",
         wide: true,
         slides: [
-            { leftLabel: "NCSU",    rightLabel: "Team of 6",         title: "WolfCafe",   kicker: "Full-stack café ordering platform",   body: "End-to-end ordering with Customer / Staff / Admin roles. Built over a semester with a 6-person Agile team in GitHub Projects." },
-            { leftLabel: "Roles",   rightLabel: "RBAC",              title: "Three Personas", kicker: "Customer · Staff · Admin",         body: "Customers browse → checkout. Staff fulfill orders and manage inventory. Admins control users, recipes, and tax." },
-            { leftLabel: "Backend", rightLabel: "Spring Boot",       title: "JWT + REST", kicker: "6 controllers · stateless auth",      body: "Auth, Item, Recipe, Ingredient, Order, Tax — every endpoint role-guarded. JWT filter chain + DTO/Mapper layering." },
-            { leftLabel: "Frontend", rightLabel: "React (Vite)",     title: "20+ Views",  kicker: "Real-time tax + tip math",            body: "20+ React components for login, ordering, inventory, and admin. Centralized Axios service layer keeps tokens in one place." },
-            { leftLabel: "Process", rightLabel: "Agile",             title: "Shipped",    kicker: "Sprint planning · PR reviews",        body: "GitHub Projects sprint board, parallel frontend/backend work against the DTO contract, recipes constrained by inventory." }
+            {
+                accent: 'dual', leftLabel: "NCSU", rightLabel: "Team of 6",
+                title: "WolfCafe", kicker: "Full-stack café ordering platform",
+                body: "An end-to-end café ordering platform built over a semester by a 6-person Agile team. Customers order, staff fulfill, admins run the shop — every action secured by JWT and role-based access control."
+            },
+            {
+                accent: 'cyan', leftLabel: "Roles", rightLabel: "RBAC",
+                title: "Three Personas", kicker: "Customer · Staff · Admin",
+                body: "Each role gets its own surface: Customers browse and check out, Staff fulfill orders and manage inventory, Admins control users, recipes, and tax. Spring Security guards every endpoint by role.",
+                bgImage: "wolfcafe-image/wc_roles.png"
+            },
+            {
+                accent: 'lime', leftLabel: "Customer", rightLabel: "Checkout",
+                title: "The Order Flow", kicker: "Browse → tax + tip → submit",
+                body: "Customers build an order from the menu, then the cart computes a live subtotal, sales tax, and tip before submission. Tax pulls from a single source of truth so the cashier UI and the saved order always agree.",
+                bgImage: "wolfcafe-image/wc_order.png"
+            },
+            {
+                accent: 'cyan', leftLabel: "Staff", rightLabel: "Fulfill",
+                title: "Queue & Inventory", kicker: "Orders · items · recipes",
+                body: "Staff work a live order queue — fulfilling each ticket — and manage the inventory of items, recipes, and ingredients behind the menu, so a recipe is only orderable when its ingredients are in stock.",
+                bgImage: "wolfcafe-image/wc_fulfill.png"
+            },
+            {
+                accent: 'hot', leftLabel: "Backend", rightLabel: "JWT + REST",
+                title: "Under the Hood", kicker: "6 controllers · stateless auth",
+                body: "Six Spring Boot REST controllers — Auth, Item, Recipe, Ingredient, Order, Tax — over MySQL with Hibernate. A custom JWT filter chain (token provider, filter, entry point) keeps every endpoint stateless and role-guarded; DTO + Mapper layers decouple the API from the entities."
+            },
+            {
+                accent: 'lime', leftLabel: "Process", rightLabel: "Agile",
+                title: "Built by 6", kicker: "Sprint planning · PR reviews",
+                body: "Coordinated through GitHub Projects — sprint board, issues, pull-request reviews on every change. The DTO contract let the React and Spring Boot sides build in parallel. CSC326 Software Engineering @ NC State, Aug – Dec 2025."
+            }
         ],
         html: `
         <!-- Skills -->
@@ -3006,11 +3130,48 @@ const content = {
         dur: "Spring Boot (Java 21) · Next.js · PostgreSQL · Docker Compose · 24-hour Hackathon",
         wide: true,
         slides: [
-            { leftLabel: "HackNC '25", rightLabel: "24 h",            title: "Your PT",     kicker: "Personal fitness platform · BMI · diet · workouts", body: "Full-stack health app shipped end-to-end in a 24-hour hackathon. No judgment — well, maybe just a little." },
-            { leftLabel: "Stack",     rightLabel: "Java + Next.js",   title: "End-to-End",  kicker: "Spring Boot · Next.js · PostgreSQL",                body: "Java 21 backend (8+ REST endpoints) + Next.js frontend with real-time BMI tracking + PostgreSQL persistence." },
-            { leftLabel: "Deploy",    rightLabel: "1 command",        title: "Docker",      kicker: "2-service compose stack",                           body: "Wrapped everything in Docker Compose. <code>docker compose up</code> = full app on any teammate's laptop. Zero env conflicts." },
-            { leftLabel: "Challenges", rightLabel: "Resolved",        title: "Friction",    kicker: "CORS · Networking · Persistence",                   body: "Inter-container DNS (db:5432 not localhost), Spring CORS whitelist for the Next.js origin, named Postgres volume so data survives rebuilds." },
-            { leftLabel: "Outcome",   rightLabel: "Shipped",          title: "On Time",     kicker: "Submitted by deadline",                             body: "Working end-to-end prototype: BMI tracking, diet/workout logging, persistent user data, clean Next.js UI." }
+            {
+                accent: 'dual', leftLabel: "HackNC '25", rightLabel: "24 h",
+                title: "Your PT", kicker: "Your no-nonsense fitness friend",
+                body: "A full-stack health platform that tracks BMI, diet, and workouts without judgment — well, maybe just a little. Smarter than your gym mirror, friendlier than your scale. Built end-to-end at HackNC 2025.",
+                bgImage: "your_pt-image/your_pt_pic1.png"
+            },
+            {
+                accent: 'cyan', leftLabel: "Why", rightLabel: "Inspiration",
+                title: "The Idea", kicker: "Data-driven well-being",
+                body: "Managing diet and exercise consistently is hard — especially for students and professionals. We wanted a simple yet powerful tool that encourages healthy habits through interactive data tracking and personalized feedback."
+            },
+            {
+                accent: 'lime', leftLabel: "Stack", rightLabel: "3-Tier",
+                title: "The Architecture", kicker: "Spring Boot · Next.js · PostgreSQL",
+                body: "A Java 21 Spring Boot API, a Next.js interface for data visualization and input, and PostgreSQL 15 for user accounts and health metrics — three services orchestrated together by Docker Compose."
+            },
+            {
+                accent: 'cyan', leftLabel: "Core I", rightLabel: "BMI Engine",
+                title: "Health Calculator", kicker: "BMI → HealthStatus",
+                body: "The core logic: a Calculator converts height + weight into BMI and classifies it into Underweight, Healthy, Overweight, or Obese — with range validation guarding bad input. A live weight-over-time chart turns each entry into a trend.",
+                bgImage: "your_pt-image/your_pt_pic2.png"
+            },
+            {
+                accent: 'lime', leftLabel: "Core II", rightLabel: "Recommend",
+                title: "Smart Picks", kicker: "Workouts + healthy foods",
+                body: "Beyond BMI tracking, Your PT serves personalized recommendations — workout cards with sets, type, and calorie burn, and healthy-food cards broken down by calories, protein, carbs, and fat — turning raw health data into an actionable plan.",
+                bgImages: ["your_pt-image/your_pt_pic3.png", "your_pt-image/your_pt_pic4.png"]
+            },
+            {
+                accent: 'hot', leftLabel: "Challenges", rightLabel: "Resolved",
+                title: "The Friction", kicker: "What we wrestled with",
+                body: "Inter-container communication (services address each other by name on the Docker network), CORS between the Next.js frontend and Spring backend, persisting user data across container rebuilds via a named volume, and designing a clean, intuitive UI under time pressure."
+            },
+            {
+                accent: 'lime', leftLabel: "Demo", rightLabel: "Watch It",
+                title: "Shipped In<br>24 H", kicker: "End-to-end by the deadline",
+                body: "A fully working prototype at submission — signup &amp; login, BMI tracking, health-data history, plus workout and healthy-food pages. One <code>docker-compose up</code> brings the whole stack online.",
+                links: [
+                    { label: "Watch Demo", icon: "▶", url: "https://youtu.be/jpjTUR5YIb0?si=z_otPIZ4-rK6cAb_" },
+                    { label: "Devpost",    icon: "◆", url: "https://devpost.com/software/your-pt?ref_content=user-portfolio&ref_feature=in_progress" }
+                ]
+            }
         ],
         html: `
         <!-- Skills -->
@@ -3148,11 +3309,95 @@ const content = {
         dur: "Python · OpenCV · NumPy · Matplotlib · CSC591 @ NCSU",
         wide: true,
         slides: [
-            { leftLabel: "CSC591",   rightLabel: "Open-Set",       title: "Fingerprint ID",  kicker: "1 : N biometric identification",        body: "Identify a probe fingerprint across N enrolled identities — or reject it as Unknown if no match is confident enough." },
-            { leftLabel: "Stage 1",  rightLabel: "Clean Ridges",   title: "Preprocess",      kicker: "Median blur · CLAHE · normalize",       body: "Median blur kills sensor noise without smoothing ridges. CLAHE lifts valley/ridge contrast. Cleaner input → more stable keypoints." },
-            { leftLabel: "Stage 2",  rightLabel: "RootSIFT",       title: "Features",        kicker: "Hellinger-kernel SIFT + histogram",     body: "RootSIFT (L1 → √ → L2) makes L2 distance behave like Hellinger — far better on ridge texture. Plus a 128-bin intensity histogram." },
-            { leftLabel: "Stage 3",  rightLabel: "28.5 / 1.6",     title: "Open Set",        kicker: "Threshold + runner-up margin",          body: "Top-2 templates per identity. Accept only if score ≥ 28.5 AND beats runner-up by ≥ 1.6. Else → Unknown." },
-            { leftLabel: "Result",   rightLabel: "Auto Eval",      title: "<strong>Robust</strong>", kicker: "Acc · Precision · Recall · F1",  body: "Impostors land in Unknown, not a wrong identity. Every run auto-emits a confusion + metrics dashboard PNG." }
+            {
+                accent: 'dual', leftLabel: "CSC591", rightLabel: "Biometrics",
+                title: "Fingerprint ID", kicker: "Open-set 1:N identification",
+                body: "An end-to-end pipeline that links a scanned fingerprint to one of N enrolled identities — answering \"who is this?\" against a gallery, or returning <strong>Unknown</strong> when no match is confident enough."
+            },
+            {
+                accent: 'cyan', leftLabel: "Flow", rightLabel: "7 Stages",
+                title: "The Pipeline", kicker: "Load → match → evaluate",
+                body: "Load image → preprocess → extract features → build a gallery from the train set → score each probe against every identity → decide (ID or Unknown) → evaluate against ground truth."
+            },
+            {
+                accent: 'lime', leftLabel: "Stage 1", rightLabel: "Clean Ridges",
+                title: "Preprocess", kicker: "Median blur · CLAHE · normalize",
+                body: "Median blur strips sensor noise without smoothing ridges. CLAHE lifts local valley-vs-ridge contrast. Min-max normalize to 0–255 — cleaner input means more stable keypoints downstream.",
+                viewImg: "fingerprint-image/fp_clahe.png", viewLabel: "CLAHE Result",
+                code: `def preprocess(image):
+    # 1 - Noise reduction (median blur)
+    blurred = cv2.medianBlur(image, 3)
+
+    # 2 - Contrast enhancement (CLAHE)
+    clahe = cv2.createCLAHE(clipLimit=2.0,
+                            tileGridSize=(8, 8))
+    enhanced = clahe.apply(blurred)
+
+    # 3 - Normalize intensity to 0-255
+    return cv2.normalize(enhanced, None, 0, 255,
+                         cv2.NORM_MINMAX)`
+            },
+            {
+                accent: 'cyan', leftLabel: "Stage 2", rightLabel: "RootSIFT",
+                title: "Features", kicker: "RootSIFT + intensity histogram",
+                body: "SIFT keypoints (cap raised to 500 for a richer representation), then a RootSIFT transform — L1-normalize → √ → L2 — so L2 distance behaves like the Hellinger kernel, far better on ridge texture. A 128-bin L2-normalized histogram adds a coarse global signal.",
+                code: `def extract_features(image):
+    """RootSIFT descriptors + global histogram."""
+    sift = cv2.SIFT_create(nfeatures=500)
+    kp, des = sift.detectAndCompute(image, None)
+
+    if des is not None:
+        des = _root_sift_descriptors(des)  # L1 -> sqrt -> L2
+
+    hist = _normalized_histogram(image, bins=128)
+    return kp, {"sift": des, "hist": hist}`
+            },
+            {
+                accent: 'lime', leftLabel: "Stage 3", rightLabel: "Hybrid Score",
+                title: "Matching", kicker: "Brute-force L2 + histogram fusion",
+                body: "Brute-force L2 matching with cross-check counts the strong descriptor matches under a distance threshold, then adds a histogram-cosine bonus. Fusing local + global signals stabilizes scoring when local matching gets noisy.",
+                code: `def match_fingerprints(feat1, feat2, bf=None):
+    """Hybrid: RootSIFT match count + histogram bonus."""
+    d1, d2 = feat1["sift"], feat2["sift"]
+    h1, h2 = feat1["hist"], feat2["hist"]
+
+    hist_sim   = float(np.clip(np.dot(h1, h2), -1, 1))
+    hist_bonus = 150.0 * max(0.0, hist_sim - 0.965)
+
+    if d1 is None or d2 is None:
+        return hist_bonus
+
+    matches = bf.match(d1, d2)
+    good = sum(1 for m in matches if m.distance < 255.0)
+    return float(good) + hist_bonus`
+            },
+            {
+                accent: 'hot', leftLabel: "Stage 4", rightLabel: "28.5 / 1.6",
+                title: "Open-Set Gate", kicker: "Threshold + runner-up margin",
+                body: "For each identity, take the best score across its templates, then rank everyone. Accept the top identity only if its score ≥ <strong>28.5</strong> AND it beats the runner-up by ≥ <strong>1.6</strong> — otherwise return Unknown. The margin kills ambiguous picks.",
+                code: `def identify_user(probe, database,
+                  threshold=28.5, margin=1.6):
+    """1:N open-set identification."""
+    bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
+    scores = {}
+    for pid, templates in database.items():
+        scores[pid] = max(match_fingerprints(probe, t, bf)
+                          for t in templates)
+
+    ranked = sorted(scores.items(), key=lambda x: -x[1])
+    best_id, best = ranked[0]
+    second = ranked[1][1] if len(ranked) > 1 else 0.0
+
+    if best < threshold:        return "Unknown", best
+    if best - second < margin:  return "Unknown", best
+    return best_id, best`
+            },
+            {
+                accent: 'lime', leftLabel: "Results", rightLabel: "500 Probes",
+                title: "<strong>59.4%</strong> Accuracy", kicker: "ROC AUC 0.95",
+                body: "Across 500 probe images: 297 correct IDs, precision <strong>71.6%</strong>, recall <strong>77.8%</strong>, F1 <strong>0.745</strong>. The ROC curve reaches an area of <strong>0.95</strong> — strong genuine-vs-impostor separability. Every run auto-emits the metrics dashboard.",
+                viewImg: "fingerprint-image/fp_dashboard.png", viewLabel: "Metrics Dashboard"
+            }
         ],
         html: `
         <!-- Skills -->
@@ -3322,20 +3567,35 @@ function openTerm(id) {
     let body;
     if (Array.isArray(d.slides) && d.slides.length) {
         const slides = d.slides;
+        // Stash for the slide controller so Show-Code / View buttons can read
+        // each slide's code + image without re-deriving the content entry.
+        window.__fxActiveSlides = slides;
         const headerTxt = (d.t || '').split('//').slice(-1)[0].trim() || (d.t || '');
         body =
             `<button class="fx-close" type="button" onclick="closeTerm()">[ CLOSE ]</button>` +
             `<div class="fx-stage" style="--fx-count: ${slides.length}">` +
                 `<div class="fx-fixed" data-active-accent="${slides[0].accent || 'lime'}">` +
                     `<div class="fx-bgs">` +
-                        slides.map((s, i) =>
-                            `<div class="fx-bg ${i === 0 ? 'active' : ''}${s.video ? ' has-video' : ''}" ` +
+                        slides.map((s, i) => {
+                            const hasImg = !!(s.bgImage || (s.bgImages && s.bgImages.length));
+                            let bgInner = '';
+                            if (s.video) {
+                                bgInner = `<video class="fx-bg-video" src="${s.video}" muted loop playsinline preload="auto"></video>`;
+                            } else if (s.bgImages && s.bgImages.length) {
+                                // Split background — each image fills an equal slice
+                                bgInner = s.bgImages.map((src, k) =>
+                                    `<div class="fx-bg-image fx-bg-split" style="background-image:url('${src}'); ` +
+                                        `left:${(k / s.bgImages.length) * 100}%; width:${(1 / s.bgImages.length) * 100}%;"></div>`
+                                ).join('');
+                            } else if (s.bgImage) {
+                                bgInner = `<div class="fx-bg-image" style="background-image:url('${s.bgImage}')"></div>`;
+                            }
+                            return `<div class="fx-bg ${i === 0 ? 'active' : ''}` +
+                                `${s.video ? ' has-video' : ''}${hasImg ? ' has-image' : ''}" ` +
                                 `data-slide-bg="${i}" data-accent="${s.accent || 'lime'}">` +
-                                (s.video
-                                    ? `<video class="fx-bg-video" src="${s.video}" muted loop playsinline preload="auto"></video>`
-                                    : '') +
-                            `</div>`
-                        ).join('') +
+                                bgInner +
+                            `</div>`;
+                        }).join('') +
                     `</div>` +
                     `<div class="fx-grid">` +
                         `<div class="fx-header">${headerTxt}</div>` +
@@ -3350,12 +3610,21 @@ function openTerm(id) {
                                     `<div class="fx-featured ${i === 0 ? 'active' : ''}" data-slide-feat="${i}">` +
                                         (s.demo
                                             ? (s.demoLink
-                                                ? `<a class="fx-demo-tag" href="${s.demoLink}" target="_blank" rel="noopener noreferrer" data-demo-i="${i}" aria-label="Open demo video in Google Drive">▶ Play Demo ↗</a>`
-                                                : `<button class="fx-demo-tag" type="button" data-demo-i="${i}" aria-label="Play demo video">▶ Play Demo</button>`)
+                                                ? `<a class="fx-demo-tag" href="${s.demoLink}" target="_blank" rel="noopener noreferrer" data-demo-i="${i}" aria-label="Open demo video">▶ ${s.demoLabel || 'Play Demo'} ↗</a>`
+                                                : `<button class="fx-demo-tag" type="button" data-demo-i="${i}" aria-label="Play demo video">▶ ${s.demoLabel || 'Play Demo'}</button>`)
                                             : '') +
                                         `<h3 class="fx-title">${s.title || ''}</h3>` +
                                         (s.kicker ? `<p class="fx-kicker">${s.kicker}</p>` : '') +
                                         (s.body   ? `<p class="fx-body">${s.body}</p>`     : '') +
+                                        ((s.code || s.viewImg || (s.links && s.links.length))
+                                            ? `<div class="fx-actions">` +
+                                                (s.code    ? `<button class="fx-action" type="button" data-code-i="${i}">&lt;/&gt; Show Code</button>` : '') +
+                                                (s.viewImg ? `<button class="fx-action" type="button" data-view-i="${i}">&#9707; ${s.viewLabel || 'View Image'}</button>` : '') +
+                                                ((s.links || []).map(l =>
+                                                    `<a class="fx-action" href="${l.url}" target="_blank" rel="noopener noreferrer">${l.icon || '↗'} ${l.label}</a>`
+                                                ).join('')) +
+                                              `</div>`
+                                            : '') +
                                     `</div>`
                                 ).join('') +
                             `</div>` +
@@ -3632,6 +3901,30 @@ function initProjectSlides() {
             return;
         }
 
+        // ── "Show Code" button → code lightbox
+        const codeBtn = e.target.closest('[data-code-i]');
+        if (codeBtn) {
+            e.preventDefault(); e.stopPropagation();
+            const i = +codeBtn.dataset.codeI;
+            const s = (window.__fxActiveSlides || [])[i];
+            if (s && s.code) {
+                openCodeLightbox(s.code, (s.codeLabel || s.title || 'Code').replace(/<[^>]+>/g, ''));
+            }
+            return;
+        }
+
+        // ── "View" button → image lightbox (result charts / diagrams)
+        const viewBtn = e.target.closest('[data-view-i]');
+        if (viewBtn) {
+            e.preventDefault(); e.stopPropagation();
+            const i = +viewBtn.dataset.viewI;
+            const s = (window.__fxActiveSlides || [])[i];
+            if (s && s.viewImg) {
+                openImageLightbox(s.viewImg, (s.viewLabel || s.title || '').replace(/<[^>]+>/g, ''));
+            }
+            return;
+        }
+
         // ── List label → smooth-scroll to slide
         const it = e.target.closest('[data-slide-i]');
         if (!it) return;
@@ -3677,6 +3970,8 @@ function openFxLightbox(src, caption) {
 
     // Show shell + loading overlay while we buffer
     if (cap) cap.textContent = caption || '';
+    lb.classList.remove('mode-img', 'mode-code');
+    lb.classList.add('mode-video');
     lb.style.display = 'flex';
     lb.classList.add('loading');
     requestAnimationFrame(() => lb.classList.add('visible'));
@@ -3706,12 +4001,46 @@ function openFxLightbox(src, caption) {
         }
     }, 1200);
 }
+// Image lightbox — result charts, diagrams (no buffering, instant).
+function openImageLightbox(src, caption) {
+    if (!src) return;
+    const lb  = document.getElementById('fx-lightbox');
+    const img = document.getElementById('fx-lightbox-img');
+    const cap = document.getElementById('fx-lightbox-caption');
+    if (!lb || !img) return;
+    lb.classList.remove('mode-video', 'mode-code', 'loading');
+    lb.classList.add('mode-img');
+    img.src = src;
+    if (cap) cap.textContent = caption || '';
+    lb.style.display = 'flex';
+    requestAnimationFrame(() => lb.classList.add('visible'));
+}
+// Code lightbox — shows a snippet in a styled <pre>. textContent keeps it
+// injection-safe (the code string is rendered verbatim, no HTML parsing).
+function openCodeLightbox(code, caption) {
+    if (!code) return;
+    const lb   = document.getElementById('fx-lightbox');
+    const codeEl = document.getElementById('fx-lightbox-code-text');
+    const cap  = document.getElementById('fx-lightbox-caption');
+    if (!lb || !codeEl) return;
+    lb.classList.remove('mode-video', 'mode-img', 'loading');
+    lb.classList.add('mode-code');
+    codeEl.textContent = code;
+    if (cap) cap.textContent = caption ? ('< ' + caption + ' />') : '';
+    lb.style.display = 'flex';
+    requestAnimationFrame(() => lb.classList.add('visible'));
+}
 function closeFxLightbox() {
     const lb     = document.getElementById('fx-lightbox');
     const video  = document.getElementById('fx-lightbox-video');
+    const img    = document.getElementById('fx-lightbox-img');
     if (!lb) return;
     lb.classList.remove('visible', 'loading');
-    setTimeout(() => { lb.style.display = 'none'; }, 220);
+    setTimeout(() => {
+        lb.style.display = 'none';
+        lb.classList.remove('mode-video', 'mode-img', 'mode-code');
+    }, 220);
+    if (img) img.removeAttribute('src');
     if (video) {
         if (__fxLbCanplayHandler) {
             try { video.removeEventListener('canplay', __fxLbCanplayHandler); } catch (_) {}
