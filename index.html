@@ -1031,18 +1031,23 @@
             background: #000;
             display: none;
         }
-        /* Still-image variant (result charts, diagrams) */
+        /* Still-image variant (result charts, diagrams).
+           width is set (not just max-width) so small source images — e.g. the
+           386×130 CLAHE comparison — scale UP to a readable size instead of
+           rendering at their tiny native dimensions. */
         .fx-lightbox-img {
             display: none;
-            max-width: 92vw;
+            width: min(900px, 92vw);
+            height: auto;
             max-height: 84vh;
+            object-fit: contain;
             border: 2px solid var(--lime);
             box-shadow:
                 0 0 60px rgba(210, 255, 0, 0.25),
                 0 30px 60px rgba(0, 0, 0, 0.7);
             background: #fff;
         }
-        /* Code-snippet variant */
+        /* Code-snippet variant — VS Code "Dark+" default theme */
         .fx-lightbox-code {
             display: none;
             margin: 0;
@@ -1050,7 +1055,7 @@
             max-height: 80vh;
             overflow: auto;
             padding: 1.6rem 1.9rem;
-            background: #0d1117;
+            background: #1e1e1e;
             border: 1px solid var(--border);
             border-left: 3px solid var(--lime);
             box-shadow:
@@ -1062,7 +1067,7 @@
             font-family: 'Fira Code', monospace;
             font-size: 0.82rem;
             line-height: 1.65;
-            color: #e8f0cc;
+            color: #d4d4d4;            /* VS Code default foreground */
             white-space: pre;
             tab-size: 4;
         }
@@ -4015,8 +4020,52 @@ function openImageLightbox(src, caption) {
     lb.style.display = 'flex';
     requestAnimationFrame(() => lb.classList.add('visible'));
 }
-// Code lightbox — shows a snippet in a styled <pre>. textContent keeps it
-// injection-safe (the code string is rendered verbatim, no HTML parsing).
+// Lightweight syntax highlighter — VS Code "Dark+" default palette.
+// Handles Python + Java well enough for the short portfolio snippets.
+// Every token is HTML-escaped before being wrapped, so the output is safe.
+function highlightCode(code) {
+    const C = {
+        comment: '#6A9955',  // green
+        string:  '#CE9178',  // salmon
+        keyword: '#569CD6',  // blue
+        type:    '#4EC9B0',  // teal
+        func:    '#DCDCAA',  // yellow
+        number:  '#B5CEA8',  // light green
+        plain:   '#D4D4D4'   // default foreground
+    };
+    const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const span = (cls, txt) => `<span style="color:${C[cls]}">${esc(txt)}</span>`;
+    const KEYWORDS = new Set([
+        'def','class','return','if','elif','else','for','while','import','from','as',
+        'with','try','except','finally','in','is','not','and','or','lambda','pass',
+        'continue','break','yield','raise','global','nonlocal','assert','del','await','async',
+        'public','private','protected','static','final','abstract','new','this','super',
+        'extends','implements','package','interface','enum','throws','throw','void',
+        'int','double','float','long','boolean','char','byte','short','String'
+    ]);
+    const CONSTS = new Set(['None','True','False','null','true','false','self','cls']);
+    // Order matters: comments, strings, numbers, identifiers, whitespace, then anything else.
+    const re = /(#[^\n]*|\/\/[^\n]*)|("""[\s\S]*?"""|'''[\s\S]*?'''|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(\b\d+\.?\d*\b)|([A-Za-z_]\w*)|(\s+)|([\s\S])/g;
+    let out = '', m;
+    while ((m = re.exec(code)) !== null) {
+        if (m[1])      out += span('comment', m[1]);
+        else if (m[2]) out += span('string',  m[2]);
+        else if (m[3]) out += span('number',  m[3]);
+        else if (m[4]) {
+            const w = m[4];
+            const rest = code.slice(re.lastIndex);
+            if (KEYWORDS.has(w) || CONSTS.has(w)) out += span('keyword', w);
+            else if (/^\s*\(/.test(rest))         out += span('func', w);   // call → yellow
+            else if (/^[A-Z]/.test(w))            out += span('type', w);   // Capitalized → teal
+            else                                  out += span('plain', w);
+        }
+        else if (m[5]) out += m[5];               // whitespace — emit raw
+        else if (m[6]) out += esc(m[6]);          // punctuation / operators
+    }
+    return out;
+}
+
+// Code lightbox — renders a snippet with VS Code-style syntax coloring.
 function openCodeLightbox(code, caption) {
     if (!code) return;
     const lb   = document.getElementById('fx-lightbox');
@@ -4025,7 +4074,7 @@ function openCodeLightbox(code, caption) {
     if (!lb || !codeEl) return;
     lb.classList.remove('mode-video', 'mode-img', 'loading');
     lb.classList.add('mode-code');
-    codeEl.textContent = code;
+    codeEl.innerHTML = highlightCode(code);
     if (cap) cap.textContent = caption ? ('< ' + caption + ' />') : '';
     lb.style.display = 'flex';
     requestAnimationFrame(() => lb.classList.add('visible'));
